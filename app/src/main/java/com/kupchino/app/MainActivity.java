@@ -57,14 +57,56 @@ public class MainActivity extends Activity {
         text.setGravity(Gravity.CENTER);
         root.addView(text);
 
-        Button play=btn("▶ Играть в Flappy Купчино");
+        Button play=btn("▶ Играть");
         play.setTextSize(18);
-        play.setOnClickListener(v->showGame());
+        play.setOnClickListener(v->showGamesMenu());
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);
         bp.setMargins(0,20,0,0);
         root.addView(play,bp);
 
         setContentView(root);
+    }
+
+    private void showGamesMenu(){
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER);
+        root.setPadding(28,28,28,28);
+        root.setBackgroundColor(Color.BLACK);
+
+        TextView title=new TextView(this);
+        title.setText("🎮 ИГРЫ КУПЧИНО");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(30);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title,new LinearLayout.LayoutParams(-1,-2));
+
+        Button mines=btn("1. 💣 Сапёрное Купчино");
+        Button flappy=btn("2. 🐦 Флаппи Купчино");
+        Button tetris=btn("3. 🧱 Тетрипчино");
+        Button back=btn("← Назад");
+
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
+        p.setMargins(0,18,0,0);
+
+        mines.setOnClickListener(v->showComingSoon("💣 Сапёрное Купчино"));
+        flappy.setOnClickListener(v->showGame());
+        tetris.setOnClickListener(v->showComingSoon("🧱 Тетрипчино"));
+        back.setOnClickListener(v->showGamesMenu());
+
+        root.addView(mines,p);
+        root.addView(flappy,p);
+        root.addView(tetris,p);
+        root.addView(back,p);
+        setContentView(root);
+    }
+
+    private void showComingSoon(String name){
+        new AlertDialog.Builder(this)
+            .setTitle(name)
+            .setMessage("Игра добавлена в меню. Полную версию сделаем следующим обновлением 🤑")
+            .setPositiveButton("ОК", null)
+            .show();
     }
 
     private void showGame(){
