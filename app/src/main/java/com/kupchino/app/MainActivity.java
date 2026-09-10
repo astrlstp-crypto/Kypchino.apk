@@ -111,6 +111,7 @@ public class MainActivity extends Activity {
         Button mines=btn("1. 💣 Сапёрное Купчино");
         Button flappy=btn("2. 🐦 Флаппи Купчино");
         Button tetris=btn("3. 🧱 Тетрипчино");
+        Button clicker=btn("4. 🐈 Кликер купчинности");
         Button back=btn("← Назад");
 
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
@@ -119,11 +120,13 @@ public class MainActivity extends Activity {
         mines.setOnClickListener(v->showMinesweeper());
         flappy.setOnClickListener(v->showGame());
         tetris.setOnClickListener(v->showTetris());
+        clicker.setOnClickListener(v->showClicker());
         back.setOnClickListener(v->showHome());
 
         root.addView(mines,p);
         root.addView(flappy,p);
         root.addView(tetris,p);
+        root.addView(clicker,p);
         root.addView(back,p);
         setContentView(root);
     }
@@ -134,6 +137,19 @@ public class MainActivity extends Activity {
             .setMessage("Игра добавлена в меню. Полную версию сделаем следующим обновлением 🤑")
             .setPositiveButton("ОК", null)
             .show();
+    }
+
+    private void showClicker(){
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+
+        Button back=btn("← Игры");
+        back.setOnClickListener(v->showGamesMenu());
+        root.addView(back,new LinearLayout.LayoutParams(-1,-2));
+
+        root.addView(new ClickerView(this),new LinearLayout.LayoutParams(-1,0,1f));
+        setContentView(root);
     }
 
     private void showMinesweeper(){
