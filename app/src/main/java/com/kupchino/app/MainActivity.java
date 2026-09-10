@@ -93,9 +93,9 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
         p.setMargins(0,18,0,0);
 
-        mines.setOnClickListener(v->showComingSoon("💣 Сапёрное Купчино"));
+        mines.setOnClickListener(v->showMinesweeper());
         flappy.setOnClickListener(v->showGame());
-        tetris.setOnClickListener(v->showComingSoon("🧱 Тетрипчино"));
+        tetris.setOnClickListener(v->showTetris());
         back.setOnClickListener(v->showHome());
 
         root.addView(mines,p);
@@ -111,6 +111,50 @@ public class MainActivity extends Activity {
             .setMessage("Игра добавлена в меню. Полную версию сделаем следующим обновлением 🤑")
             .setPositiveButton("ОК", null)
             .show();
+    }
+
+    private void showMinesweeper(){
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+        Button back=btn("← Игры");
+        back.setOnClickListener(v->showGamesMenu());
+        root.addView(back,new LinearLayout.LayoutParams(-1,-2));
+        root.addView(new MinesweeperView(this),new LinearLayout.LayoutParams(-1,0,1f));
+        setContentView(root);
+    }
+
+    private void showTetris(){
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+
+        Button back=btn("← Игры");
+        back.setOnClickListener(v->showGamesMenu());
+        root.addView(back,new LinearLayout.LayoutParams(-1,-2));
+
+        TetrisView t=new TetrisView(this);
+        root.addView(t,new LinearLayout.LayoutParams(-1,0,1f));
+
+        LinearLayout controls=new LinearLayout(this);
+        controls.setGravity(Gravity.CENTER);
+        Button left=btn("◀");
+        Button rotate=btn("⟳");
+        Button down=btn("▼");
+        Button right=btn("▶");
+        Button drop=btn("⤓");
+        Button restart=btn("↻");
+        left.setOnClickListener(v->t.left());
+        rotate.setOnClickListener(v->t.rotate());
+        down.setOnClickListener(v->t.down());
+        right.setOnClickListener(v->t.right());
+        drop.setOnClickListener(v->t.drop());
+        restart.setOnClickListener(v->t.restart());
+        LinearLayout.LayoutParams w=new LinearLayout.LayoutParams(0,-2,1f);
+        controls.addView(left,w);controls.addView(rotate,w);controls.addView(down,w);
+        controls.addView(right,w);controls.addView(drop,w);controls.addView(restart,w);
+        root.addView(controls,new LinearLayout.LayoutParams(-1,-2));
+        setContentView(root);
     }
 
     private void showGame(){
