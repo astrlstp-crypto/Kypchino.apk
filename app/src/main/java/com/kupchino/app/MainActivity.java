@@ -1,6 +1,7 @@
 package com.kupchino.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -35,12 +36,24 @@ public class MainActivity extends Activity {
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
         GameView game=new GameView(this); game.setBirdColor(birdColors[birdIndex]); game.setBeakColor(beakColors[beakIndex]); game.setHat(hatIndex);
         LinearLayout bar=new LinearLayout(this); bar.setOrientation(LinearLayout.HORIZONTAL); bar.setGravity(Gravity.CENTER);
-        Button back=btn("⌂"); Button bird=btn("Птица 🎨"); Button beak=btn("Клюв 🎨"); Button hat=btn("Шляпа: нет");
+        Button back=btn("⌂"); Button pause=btn("⏸"); Button bird=btn("Птица 🎨"); Button beak=btn("Клюв 🎨"); Button hat=btn("Шляпа: нет");
         back.setOnClickListener(v->showHome());
+        pause.setOnClickListener(v->{ game.pauseGame(); showPauseMenu(game); });
         bird.setOnClickListener(v->{ birdIndex=(birdIndex+1)%birdColors.length; game.setBirdColor(birdColors[birdIndex]); });
         beak.setOnClickListener(v->{ beakIndex=(beakIndex+1)%beakColors.length; game.setBeakColor(beakColors[beakIndex]); });
         hat.setOnClickListener(v->{ hatIndex=(hatIndex+1)%4; game.setHat(hatIndex); String[] n={"нет","кепка","шлем","Dorito"}; hat.setText("Шляпа: "+n[hatIndex]); });
-        LinearLayout.LayoutParams w=new LinearLayout.LayoutParams(0,-2,1f); bar.addView(back,w); bar.addView(bird,w); bar.addView(beak,w); bar.addView(hat,w);
+        LinearLayout.LayoutParams w=new LinearLayout.LayoutParams(0,-2,1f); bar.addView(back,w); bar.addView(pause,w); bar.addView(bird,w); bar.addView(beak,w); bar.addView(hat,w);
         root.addView(bar,new LinearLayout.LayoutParams(-1,-2)); root.addView(game,new LinearLayout.LayoutParams(-1,0,1f)); setContentView(root);
+
+    private void showPauseMenu(GameView game){
+        new AlertDialog.Builder(this)
+            .setTitle("⏸ Пауза")
+            .setMessage("FLAPPY КУПЧИНО")
+            .setCancelable(false)
+            .setPositiveButton("▶ Продолжить", (d,w)->game.resumeGame())
+            .setNeutralButton("↻ Заново", (d,w)->game.restartGame())
+            .setNegativeButton("⌂ В меню", (d,w)->showHome())
+            .show();
+    }
     }
 }
