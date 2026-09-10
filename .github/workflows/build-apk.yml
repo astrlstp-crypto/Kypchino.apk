@@ -15,6 +15,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Prepare app icon
+        run: |
+          mkdir -p app/src/main/res/drawable
+          base64 -d app/src/main/icon.jpg.b64 > app/src/main/res/drawable/kupchino_icon.jpg
       - name: Build APK
         run: gradle assembleDebug
       - name: Rename APK
