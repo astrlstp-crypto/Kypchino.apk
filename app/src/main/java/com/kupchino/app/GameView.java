@@ -25,6 +25,7 @@ public class GameView extends View {
     private boolean paused = false;
     private int score = 0;
     private int best;
+    private String activeSlot = "A";
     private int birdColor = Color.rgb(255,215,40);
     private int beakColor = Color.rgb(255,120,20);
     private int hat = 0;
@@ -37,7 +38,8 @@ public class GameView extends View {
         super(c);
         setBackgroundColor(Color.rgb(120,205,245));
         prefs = c.getSharedPreferences("flappy", Context.MODE_PRIVATE);
-        best = prefs.getInt("best", 0);
+        activeSlot = prefs.getString("active_slot", "A");
+        best = prefs.getInt("best_" + activeSlot, 0);
         setFocusable(true);
     }
 
@@ -48,6 +50,24 @@ public class GameView extends View {
     public void resumeGame(){ if(paused && !gameOver){ paused = false; running = true; lastTime = System.nanoTime(); invalidate(); } }
     public void restartGame(){ reset(); running = true; paused = false; vy = -dp(330); lastTime = System.nanoTime(); invalidate(); }
     public boolean isPaused(){ return paused; }
+    public int getScore(){ return score; }
+    public int getBest(){ return best; }
+    public String getActiveSlot(){ return activeSlot; }
+    public int getSavedBest(String slot){ return prefs.getInt("best_" + slot, 0); }
+    public void saveToSlot(String slot){
+        int old = prefs.getInt("best_" + slot, 0);
+        int value = Math.max(old, Math.max(best, score));
+        prefs.edit().putInt("best_" + slot, value).putString("active_slot", slot).apply();
+        activeSlot = slot;
+        best = value;
+        invalidate();
+    }
+    public void loadSlot(String slot){
+        activeSlot = slot;
+        best = prefs.getInt("best_" + slot, 0);
+        prefs.edit().putString("active_slot", slot).apply();
+        invalidate();
+    }
 
     private float dp(float v){ return v * getResources().getDisplayMetrics().density; }
 
@@ -90,7 +110,7 @@ public class GameView extends View {
         float speed = dp(155);
         for(int i=pipes.size()-1;i>=0;i--){
             Pipe q = pipes.get(i); q.x -= speed*dt;
-            if(!q.counted && q.x + dp(70) < birdX){ q.counted=true; score++; if(score>best){best=score; prefs.edit().putInt("best",best).apply();}}
+            if(!q.counted && q.x + dp(70) < birdX){ q.counted=true; score++; }
             if(q.x < -dp(90)) pipes.remove(i);
         }
         if(birdY < dp(10) || birdY > getHeight()-dp(55)) die();
@@ -170,7 +190,7 @@ public class GameView extends View {
     private void drawHud(Canvas c){
         p.setColor(Color.WHITE); p.setTextAlign(Paint.Align.CENTER); p.setFakeBoldText(true); p.setTextSize(dp(34));
         c.drawText(String.valueOf(score),getWidth()/2f,dp(55),p);
-        p.setTextSize(dp(15)); c.drawText("BEST "+best,getWidth()/2f,dp(78),p);
+        p.setTextSize(dp(15)); c.drawText("BEST "+best+"  SAVE "+activeSlot,getWidth()/2f,dp(78),p);
         if(paused){
             p.setColor(Color.argb(190,0,0,0)); c.drawRoundRect(new RectF(dp(35),getHeight()*.35f,getWidth()-dp(35),getHeight()*.58f),dp(18),dp(18),p);
             p.setColor(Color.WHITE); p.setTextSize(dp(26)); c.drawText("ПАУЗА",getWidth()/2f,getHeight()*.44f,p);
