@@ -136,6 +136,20 @@ public class MainActivity extends Activity {
         TetrisView t=new TetrisView(this);
         root.addView(t,new LinearLayout.LayoutParams(-1,0,1f));
 
+        LinearLayout dock=new LinearLayout(this);
+        dock.setOrientation(LinearLayout.VERTICAL);
+        dock.setGravity(Gravity.CENTER);
+        dock.setPadding(12,10,12,30);
+        dock.setBackgroundColor(0xFF2F333A);
+
+        TextView dockTitle=new TextView(this);
+        dockTitle.setText("УПРАВЛЕНИЕ ТЕТРИПЧИНО");
+        dockTitle.setTextColor(Color.WHITE);
+        dockTitle.setGravity(Gravity.CENTER);
+        dockTitle.setTextSize(13);
+        dockTitle.setPadding(0,0,0,8);
+        dock.addView(dockTitle,new LinearLayout.LayoutParams(-1,-2));
+
         LinearLayout controls=new LinearLayout(this);
         controls.setGravity(Gravity.CENTER);
         Button left=btn("◀");
@@ -153,7 +167,9 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams w=new LinearLayout.LayoutParams(0,-2,1f);
         controls.addView(left,w);controls.addView(rotate,w);controls.addView(down,w);
         controls.addView(right,w);controls.addView(drop,w);controls.addView(restart,w);
-        root.addView(controls,new LinearLayout.LayoutParams(-1,-2));
+        dock.addView(controls,new LinearLayout.LayoutParams(-1,-2));
+
+        root.addView(dock,new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
     }
 
