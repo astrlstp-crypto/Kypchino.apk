@@ -22,6 +22,7 @@ public class ClickerView extends LinearLayout {
     private double baseClickLog = 0.0;
     private int rebirths = 0;
     private int prestiges = 0;
+    private Button rebirthButton, prestigeButton;
 
     private static final String[] SUFFIX = {
         "","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc","Qw","Wr","Rb","Qr",
@@ -76,18 +77,20 @@ public class ClickerView extends LinearLayout {
 
         LinearLayout actions=new LinearLayout(c);
         actions.setGravity(Gravity.CENTER);
-        Button rebirth=new Button(c);
-        rebirth.setText("♻ Перерождение\n1Vg");
+        rebirthButton=new Button(c);
+        Button rebirth=rebirthButton;
+        rebirth.setText("♻ Перерождение");
         rebirth.setAllCaps(false);
-        Button prestige=new Button(c);
-        prestige.setText("👑 Престиж\n1DuVg");
+        prestigeButton=new Button(c);
+        Button prestige=prestigeButton;
+        prestige.setText("👑 Престиж");
         prestige.setAllCaps(false);
         LayoutParams aw=new LayoutParams(0,-2,1f);
         actions.addView(rebirth,aw); actions.addView(prestige,aw);
         addView(actions,new LayoutParams(-1,-2));
 
         rebirth.setOnClickListener(v->{
-            if(hasAtLeast(57)){
+            if(hasAtLeast(rebirthCostLog())){
                 rebirths++;
                 coinsLog=Double.NEGATIVE_INFINITY;
                 baseClickLog=0;
@@ -96,7 +99,7 @@ public class ClickerView extends LinearLayout {
             }
         });
         prestige.setOnClickListener(v->{
-            if(hasAtLeast(135)){
+            if(hasAtLeast(prestigeCostLog())){
                 prestiges++;
                 rebirths=0;
                 coinsLog=Double.NEGATIVE_INFINITY;
@@ -122,6 +125,16 @@ public class ClickerView extends LinearLayout {
 
         rebuildUpgrades();
         refresh();
+    }
+
+    private double rebirthCostLog(){
+        // 1Vg, 10Vg, 100Vg, 1Uvg... — цена растёт после каждого перерождения.
+        return 57.0 + rebirths;
+    }
+
+    private double prestigeCostLog(){
+        // 1DuVg и дальше всё дороже после каждого престижа.
+        return 135.0 + prestiges*2.0;
     }
 
     private double currentClickLog(){
@@ -200,11 +213,21 @@ public class ClickerView extends LinearLayout {
         }
         if(group==SUFFIX.length) return "Rayo's number";
         if(group==SUFFIX.length+1) return "Inf";
-        return "nan";
+        if(group==SUFFIX.length+2) return "nan";
+        String[] afterNan={
+            "TTgHYgVgDu","TTgHYgUvgDu","TTgHYgUvgDu","TTgHYgTvgDu","TTgHYgQaVgDu",
+            "Worzeph","Gigant","Google","Hooster","GHFer","Hreester","Jooster","Cooster",
+            "Booster","Vooster","Looster","Fult","FultG","FultGA","inf2","inf3","MaxStreet","Debug"
+        };
+        int ai=group-(SUFFIX.length+3);
+        if(ai>=0 && ai<afterNan.length) return String.format(Locale.US,"%.2f%s",mant,afterNan[ai]);
+        return "1Debug";
     }
 
     private void refresh(){
         coinsText.setText(formatLog(coinsLog)+" 🪙");
+        if(rebirthButton!=null) rebirthButton.setText("♻ Перерождение\n"+formatLog(rebirthCostLog()));
+        if(prestigeButton!=null) prestigeButton.setText("👑 Престиж\n"+formatLog(prestigeCostLog()));
         statsText.setText("За тап: "+formatLog(currentClickLog())+
             "   •   ♻ "+rebirths+"   •   👑 "+prestiges+
             "\nАвтосохранение: ВКЛ ✅");
