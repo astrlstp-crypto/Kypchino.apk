@@ -354,6 +354,16 @@ public class MainActivity extends Activity {
             .setOnCancelListener(d->showPauseMenu(game))
             .show();
     }
+    @Override protected void onPause(){
+        calmMusic.stop();
+        super.onPause();
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        if(musicEnabled) calmMusic.start();
+    }
+
     @Override protected void onDestroy(){
         calmMusic.stop();
         super.onDestroy();
