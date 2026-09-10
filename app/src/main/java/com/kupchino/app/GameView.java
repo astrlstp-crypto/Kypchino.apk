@@ -22,6 +22,7 @@ public class GameView extends View {
     private long lastTime;
     private boolean running = false;
     private boolean gameOver = false;
+    private boolean paused = false;
     private int score = 0;
     private int best;
     private int birdColor = Color.rgb(255,215,40);
@@ -43,11 +44,15 @@ public class GameView extends View {
     public void setBirdColor(int c){ birdColor = c; invalidate(); }
     public void setBeakColor(int c){ beakColor = c; invalidate(); }
     public void setHat(int h){ hat = h; invalidate(); }
+    public void pauseGame(){ if(running && !gameOver){ paused = true; running = false; invalidate(); } }
+    public void resumeGame(){ if(paused && !gameOver){ paused = false; running = true; lastTime = System.nanoTime(); invalidate(); } }
+    public void restartGame(){ reset(); running = true; paused = false; vy = -dp(330); lastTime = System.nanoTime(); invalidate(); }
+    public boolean isPaused(){ return paused; }
 
     private float dp(float v){ return v * getResources().getDisplayMetrics().density; }
 
     private void reset(){
-        pipes.clear(); score = 0; vy = 0; spawnTimer = 0; gameOver = false; running = false;
+        pipes.clear(); score = 0; vy = 0; spawnTimer = 0; gameOver = false; running = false; paused = false;
         birdX = getWidth() * .27f; birdY = getHeight() * .45f;
         lastTime = System.nanoTime(); invalidate();
     }
@@ -56,6 +61,7 @@ public class GameView extends View {
 
     @Override public boolean onTouchEvent(MotionEvent e){
         if(e.getAction()!=MotionEvent.ACTION_DOWN) return true;
+        if(paused) return true;
         if(gameOver){ reset(); running = true; vy = -dp(330); lastTime = System.nanoTime(); }
         else { if(!running){ running = true; lastTime = System.nanoTime(); } vy = -dp(330); }
         invalidate(); return true;
@@ -165,7 +171,11 @@ public class GameView extends View {
         p.setColor(Color.WHITE); p.setTextAlign(Paint.Align.CENTER); p.setFakeBoldText(true); p.setTextSize(dp(34));
         c.drawText(String.valueOf(score),getWidth()/2f,dp(55),p);
         p.setTextSize(dp(15)); c.drawText("BEST "+best,getWidth()/2f,dp(78),p);
-        if(!running){
+        if(paused){
+            p.setColor(Color.argb(190,0,0,0)); c.drawRoundRect(new RectF(dp(35),getHeight()*.35f,getWidth()-dp(35),getHeight()*.58f),dp(18),dp(18),p);
+            p.setColor(Color.WHITE); p.setTextSize(dp(26)); c.drawText("ПАУЗА",getWidth()/2f,getHeight()*.44f,p);
+            p.setTextSize(dp(15)); c.drawText("Выбери действие в меню",getWidth()/2f,getHeight()*.50f,p);
+        } else if(!running){
             p.setColor(Color.argb(180,0,0,0)); c.drawRoundRect(new RectF(dp(35),getHeight()*.32f,getWidth()-dp(35),getHeight()*.62f),dp(18),dp(18),p);
             p.setColor(Color.WHITE); p.setTextSize(dp(25));
             c.drawText(gameOver?"ИГРА ОКОНЧЕНА":"FLAPPY КУПЧИНО",getWidth()/2f,getHeight()*.42f,p);
