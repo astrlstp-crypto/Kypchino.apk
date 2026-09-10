@@ -120,13 +120,35 @@ public class MainActivity extends Activity {
     }
 
     private void showPauseMenu(GameView game){
+        final String[] items = {"▶ Продолжить","↻ Заново","💾 Сохранения","⌂ В меню"};
         new AlertDialog.Builder(this)
             .setTitle("⏸ Пауза")
-            .setMessage("FLAPPY КУПЧИНО")
-            .setCancelable(false)
-            .setPositiveButton("▶ Продолжить", (d,w)->game.resumeGame())
-            .setNeutralButton("↻ Заново", (d,w)->game.restartGame())
-            .setNegativeButton("⌂ В меню", (d,w)->showHome())
+            .setItems(items, (d,which)->{
+                if(which==0) game.resumeGame();
+                else if(which==1) game.restartGame();
+                else if(which==2) showSavesMenu(game);
+                else showHome();
+            })
+            .setOnCancelListener(d->game.resumeGame())
+            .show();
+    }
+
+    private void showSavesMenu(GameView game){
+        String[] slots = {"A","B","C"};
+        String[] labels = {
+            "A  • рекорд " + game.getSavedBest("A"),
+            "B  • рекорд " + game.getSavedBest("B"),
+            "C  • рекорд " + game.getSavedBest("C")
+        };
+        new AlertDialog.Builder(this)
+            .setTitle("💾 Сохранения")
+            .setMessage("Выбери слот A–C. Текущий результат сохранится вручную. После смерти рекорд сам не обновляется.")
+            .setItems(labels, (d,which)->{
+                game.saveToSlot(slots[which]);
+                game.resumeGame();
+            })
+            .setNegativeButton("Назад", (d,w)->showPauseMenu(game))
+            .setOnCancelListener(d->showPauseMenu(game))
             .show();
     }
 }
