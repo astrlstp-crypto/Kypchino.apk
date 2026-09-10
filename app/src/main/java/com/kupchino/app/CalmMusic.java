@@ -19,7 +19,7 @@ public class CalmMusic {
             track=new AudioTrack(
                 new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build(),
                 new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(sr).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build(),
-                size,AudioTrack.MODE_STREAM,AudioTrack.AUDIO_SESSION_ID_GENERATE);
+                size,AudioTrack.MODE_STREAM,0);
             track.setVolume(0.12f);
             track.play();
             short[] buf=new short[1024];
