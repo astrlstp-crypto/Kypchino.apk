@@ -2,6 +2,10 @@ package com.kupchino.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Window;
+import android.view.WindowManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -92,7 +96,7 @@ public class MainActivity extends Activity {
         mines.setOnClickListener(v->showComingSoon("💣 Сапёрное Купчино"));
         flappy.setOnClickListener(v->showGame());
         tetris.setOnClickListener(v->showComingSoon("🧱 Тетрипчино"));
-        back.setOnClickListener(v->showGamesMenu());
+        back.setOnClickListener(v->showHome());
 
         root.addView(mines,p);
         root.addView(flappy,p);
@@ -162,17 +166,90 @@ public class MainActivity extends Activity {
     }
 
     private void showPauseMenu(GameView game){
-        final String[] items = {"▶ Продолжить","↻ Заново","💾 Сохранения","⌂ В меню"};
-        new AlertDialog.Builder(this)
-            .setTitle("⏸ Пауза")
-            .setItems(items, (d,which)->{
-                if(which==0) game.resumeGame();
-                else if(which==1) game.restartGame();
-                else if(which==2) showSavesMenu(game);
-                else showHome();
-            })
-            .setOnCancelListener(d->game.resumeGame())
-            .show();
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setGravity(Gravity.CENTER_HORIZONTAL);
+        panel.setPadding(34,28,34,28);
+
+        GradientDrawable bg = new GradientDrawable();
+        // Серый фон: 68% прозрачности = 32% непрозрачности.
+        bg.setColor(Color.argb(82, 90, 90, 90));
+        bg.setCornerRadius(32f);
+        bg.setStroke(2, Color.argb(150,255,255,255));
+        panel.setBackground(bg);
+
+        TextView title = new TextView(this);
+        title.setText("⏸ FLAPPY КУПЧИНО");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(26);
+        title.setGravity(Gravity.CENTER);
+        title.setShadowLayer(8,0,2,Color.BLACK);
+        panel.addView(title,new LinearLayout.LayoutParams(-1,-2));
+
+        TextView sub = new TextView(this);
+        sub.setText("ПАУЗА • SAVE "+game.getActiveSlot()+" • BEST "+game.getBest());
+        sub.setTextColor(0xFFE8E8E8);
+        sub.setTextSize(14);
+        sub.setGravity(Gravity.CENTER);
+        sub.setPadding(0,6,0,18);
+        panel.addView(sub,new LinearLayout.LayoutParams(-1,-2));
+
+        Button resume=btn("▶  ПРОДОЛЖИТЬ");
+        Button restart=btn("↻  ЗАНОВО");
+        Button saves=btn("💾  СОХРАНЕНИЯ A / B / C");
+        Button bird=btn("🐦  ЦВЕТ ПТИЧКИ 🎨");
+        Button beak=btn("🟠  ЦВЕТ КЛЮВА 🎨");
+        Button hat=btn("🧢  ГОЛОВНОЙ УБОР");
+        Button home=btn("⌂  В МЕНЮ ИГР");
+
+        Button[] buttons={resume,restart,saves,bird,beak,hat,home};
+        for(Button b:buttons){
+            b.setTextSize(16);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+            lp.setMargins(0,8,0,0);
+            panel.addView(b,lp);
+        }
+
+        resume.setOnClickListener(v->{ dialog.dismiss(); game.resumeGame(); });
+        restart.setOnClickListener(v->{ dialog.dismiss(); game.restartGame(); });
+        saves.setOnClickListener(v->{ dialog.dismiss(); showSavesMenu(game); });
+        bird.setOnClickListener(v->{
+            birdIndex=(birdIndex+1)%birdColors.length;
+            game.setBirdColor(birdColors[birdIndex]);
+            bird.setText("🐦  ЦВЕТ ПТИЧКИ "+(birdIndex+1)+"/"+birdColors.length);
+        });
+        beak.setOnClickListener(v->{
+            beakIndex=(beakIndex+1)%beakColors.length;
+            game.setBeakColor(beakColors[beakIndex]);
+            beak.setText("🟠  ЦВЕТ КЛЮВА "+(beakIndex+1)+"/"+beakColors.length);
+        });
+        hat.setOnClickListener(v->{
+            hatIndex=(hatIndex+1)%4;
+            game.setHat(hatIndex);
+            String[] n={"нет","кепка","шлем","Dorito"};
+            hat.setText("🧢  "+n[hatIndex]);
+        });
+        home.setOnClickListener(v->{ dialog.dismiss(); showGamesMenu(); });
+
+        dialog.setContentView(panel);
+        dialog.setCancelable(false);
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            WindowManager.LayoutParams lp=new WindowManager.LayoutParams();
+            lp.copyFrom(w.getAttributes());
+            lp.width=(int)(getResources().getDisplayMetrics().widthPixels*0.90f);
+            lp.height=WindowManager.LayoutParams.WRAP_CONTENT;
+            w.setAttributes(lp);
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams attrs=w.getAttributes();
+            attrs.dimAmount=0.35f;
+            w.setAttributes(attrs);
+        }
+        dialog.show();
     }
 
     private void showSavesMenu(GameView game){
