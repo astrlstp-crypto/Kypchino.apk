@@ -18,9 +18,13 @@ public class MainActivity extends Activity {
     private final int[] birdColors = {0xFFFFD728,0xFFFF5D73,0xFF4FD1FF,0xFF7EE787,0xFFC77DFF,0xFFFFFFFF};
     private final int[] beakColors = {0xFFFF7814,0xFFFFFF4A,0xFFFF4D4D,0xFF73E6FF,0xFFFFFFFF};
     private int birdIndex=0, beakIndex=0, hatIndex=0;
+    private final CalmMusic calmMusic = new CalmMusic();
+    private boolean musicEnabled = true;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
+        musicEnabled=getSharedPreferences("settings",MODE_PRIVATE).getBoolean("music",true);
+        if(musicEnabled) calmMusic.start();
         showHome();
     }
 
@@ -62,13 +66,32 @@ public class MainActivity extends Activity {
         root.addView(text);
 
         Button play=btn("▶ Играть");
+        Button settings=btn("⚙ Настройки");
         play.setTextSize(18);
         play.setOnClickListener(v->showGamesMenu());
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);
         bp.setMargins(0,20,0,0);
         root.addView(play,bp);
+        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,-2);
+        sp.setMargins(0,10,0,0);
+        root.addView(settings,sp);
+        settings.setOnClickListener(v->showSettings());
 
         setContentView(root);
+    }
+
+    private void showSettings(){
+        String status=musicEnabled?"ВКЛ":"ВЫКЛ";
+        new AlertDialog.Builder(this)
+            .setTitle("⚙ Настройки")
+            .setMessage("Тихая музыка: "+status+"\nРаботает полностью без интернета.")
+            .setPositiveButton(musicEnabled?"🔇 Выключить музыку":"🎵 Включить музыку",(d,w)->{
+                musicEnabled=!musicEnabled;
+                getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("music",musicEnabled).apply();
+                if(musicEnabled) calmMusic.start(); else calmMusic.stop();
+            })
+            .setNegativeButton("Назад",null)
+            .show();
     }
 
     private void showGamesMenu(){
@@ -139,7 +162,7 @@ public class MainActivity extends Activity {
         LinearLayout dock=new LinearLayout(this);
         dock.setOrientation(LinearLayout.VERTICAL);
         dock.setGravity(Gravity.CENTER);
-        dock.setPadding(12,10,12,30);
+        dock.setPadding(12,20,12,72);
         dock.setBackgroundColor(0xFF2F333A);
 
         TextView dockTitle=new TextView(this);
@@ -158,6 +181,7 @@ public class MainActivity extends Activity {
         Button right=btn("▶");
         Button drop=btn("⤓");
         Button restart=btn("↻");
+        left.setMinHeight(64); rotate.setMinHeight(64); down.setMinHeight(64); right.setMinHeight(64); drop.setMinHeight(64); restart.setMinHeight(64);
         left.setOnClickListener(v->t.left());
         rotate.setOnClickListener(v->t.rotate());
         down.setOnClickListener(v->t.down());
@@ -329,5 +353,9 @@ public class MainActivity extends Activity {
             .setNegativeButton("Назад", (d,w)->showPauseMenu(game))
             .setOnCancelListener(d->showPauseMenu(game))
             .show();
+    }
+    @Override protected void onDestroy(){
+        calmMusic.stop();
+        super.onDestroy();
     }
 }
