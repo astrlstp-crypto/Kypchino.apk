@@ -15,7 +15,7 @@ public class ClickerView extends LinearLayout {
     private final SharedPreferences prefs;
     private final TextView coinsText, statsText;
     private final LinearLayout upgradesBox;
-    private final boolean[] bought = new boolean[120];
+    private final int[] levels = new int[1200];
 
     // Храним огромные числа как log10: 1Vg = 10^57, 1DuVg = 10^135.
     private double coinsLog = Double.NEGATIVE_INFINITY;
@@ -91,7 +91,7 @@ public class ClickerView extends LinearLayout {
                 rebirths++;
                 coinsLog=Double.NEGATIVE_INFINITY;
                 baseClickLog=0;
-                for(int i=0;i<bought.length;i++) bought[i]=false;
+                for(int i=0;i<levels.length;i++) levels[i]=0;
                 save(); rebuildUpgrades(); refresh();
             }
         });
@@ -101,13 +101,13 @@ public class ClickerView extends LinearLayout {
                 rebirths=0;
                 coinsLog=Double.NEGATIVE_INFINITY;
                 baseClickLog=0;
-                for(int i=0;i<bought.length;i++) bought[i]=false;
+                for(int i=0;i<levels.length;i++) levels[i]=0;
                 save(); rebuildUpgrades(); refresh();
             }
         });
 
         TextView upTitle=new TextView(c);
-        upTitle.setText("⚡ 120 УЛУЧШЕНИЙ");
+        upTitle.setText("⚡ 1200 УЛУЧШЕНИЙ • КАЖДОЕ ДО 20 LVL");
         upTitle.setTextColor(Color.WHITE);
         upTitle.setTextSize(20);
         upTitle.setTypeface(Typeface.DEFAULT_BOLD);
@@ -131,23 +131,26 @@ public class ClickerView extends LinearLayout {
 
     private void rebuildUpgrades(){
         upgradesBox.removeAllViews();
-        for(int i=0;i<120;i++){
+        for(int i=0;i<1200;i++){
             final int id=i;
             Button b=new Button(getContext());
             b.setAllCaps(false);
             b.setTextSize(14);
             double cost=upgradeCostLog(i);
-            if(bought[i]){
-                b.setText("✅ Улучшение "+(i+1)+"  • куплено");
+            int lvl=levels[i];
+            int power=(i%5)+2;
+            if(lvl>=20){
+                b.setText("✅ Улучшение "+(i+1)+"  • LVL 20/20");
                 b.setEnabled(false);
             }else{
-                int power=(i%5)+2;
-                b.setText("⬆ Улучшение "+(i+1)+"  • x"+power+"\nЦена: "+formatLog(cost));
+                double levelCost=cost+lvl*0.18;
+                b.setText("⬆ Улучшение "+(i+1)+"  • LVL "+lvl+"/20 • x"+power+"\nЦена: "+formatLog(levelCost));
                 b.setOnClickListener(v->{
-                    if(hasAtLeast(cost)){
-                        subtractCost(cost);
+                    double buyCost=upgradeCostLog(id)+levels[id]*0.18;
+                    if(hasAtLeast(buyCost)){
+                        subtractCost(buyCost);
                         baseClickLog += Math.log10(power);
-                        bought[id]=true;
+                        levels[id]++;
                         save(); rebuildUpgrades(); refresh();
                     }
                 });
@@ -160,7 +163,7 @@ public class ClickerView extends LinearLayout {
 
     private double upgradeCostLog(int i){
         // От 10 монет до сверхогромных цен. Последние апгрейды уходят далеко за Vg.
-        return 1.0 + i*0.56;
+        return 1.0 + i*(400.0/1199.0);
     }
 
     private void addCoins(double addLog){
@@ -213,7 +216,7 @@ public class ClickerView extends LinearLayout {
             .putString("baseClickLog",Double.toString(baseClickLog))
             .putInt("rebirths",rebirths)
             .putInt("prestiges",prestiges);
-        for(int i=0;i<bought.length;i++) e.putBoolean("u"+i,bought[i]);
+        for(int i=0;i<levels.length;i++) e.putInt("u"+i,levels[i]);
         e.apply();
     }
 
@@ -222,6 +225,6 @@ public class ClickerView extends LinearLayout {
         try{baseClickLog=Double.parseDouble(prefs.getString("baseClickLog","0"));}catch(Exception e){baseClickLog=0;}
         rebirths=prefs.getInt("rebirths",0);
         prestiges=prefs.getInt("prestiges",0);
-        for(int i=0;i<bought.length;i++) bought[i]=prefs.getBoolean("u"+i,false);
+        for(int i=0;i<levels.length;i++) levels[i]=prefs.getInt("u"+i,0);
     }
 }
