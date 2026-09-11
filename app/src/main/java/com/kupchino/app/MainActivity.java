@@ -13,6 +13,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.EditText;
+import android.text.InputType;
 
 public class MainActivity extends Activity {
     private final int[] birdColors = {0xFFFFD728,0xFFFF5D73,0xFF4FD1FF,0xFF7EE787,0xFFC77DFF,0xFFFFFFFF};
@@ -20,10 +22,12 @@ public class MainActivity extends Activity {
     private int birdIndex=0, beakIndex=0, hatIndex=0;
     private final CalmMusic calmMusic = new CalmMusic();
     private boolean musicEnabled = true;
+    private android.content.SharedPreferences accountPrefs;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         musicEnabled=getSharedPreferences("settings",MODE_PRIVATE).getBoolean("music",true);
+        accountPrefs=getSharedPreferences("kupchino_account",MODE_PRIVATE);
         if(musicEnabled) calmMusic.start();
         showHome();
     }
@@ -81,16 +85,77 @@ public class MainActivity extends Activity {
     }
 
     private void showSettings(){
+        boolean registered=accountPrefs.getBoolean("registered",false);
+        String username=accountPrefs.getString("username","");
         String status=musicEnabled?"ВКЛ":"ВЫКЛ";
+        String account=registered?("Аккаунт: "+username+" ✅"):("Аккаунт: не зарегистрирован");
+
+        String[] items={
+            musicEnabled?"🔇 Выключить музыку":"🎵 Включить музыку",
+            registered?"👤 Аккаунт: "+username:"👤 Зарегистрироваться",
+            registered?"🚪 Выйти из аккаунта":"ℹ Локальный аккаунт"
+        };
+
         new AlertDialog.Builder(this)
             .setTitle("⚙ Настройки")
-            .setMessage("Тихая музыка: "+status+"\nРаботает полностью без интернета.")
-            .setPositiveButton(musicEnabled?"🔇 Выключить музыку":"🎵 Включить музыку",(d,w)->{
-                musicEnabled=!musicEnabled;
-                getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("music",musicEnabled).apply();
-                if(musicEnabled) calmMusic.start(); else calmMusic.stop();
+            .setMessage("Тихая музыка: "+status+"\n"+account)
+            .setItems(items,(d,which)->{
+                if(which==0){
+                    musicEnabled=!musicEnabled;
+                    getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("music",musicEnabled).apply();
+                    if(musicEnabled) calmMusic.start(); else calmMusic.stop();
+                    showSettings();
+                }else if(which==1){
+                    if(registered) showAccountInfo(); else showRegister();
+                }else if(which==2){
+                    if(registered){
+                        accountPrefs.edit().clear().apply();
+                        new AlertDialog.Builder(this).setTitle("Аккаунт").setMessage("Вы вышли из аккаунта.").setPositiveButton("ОК",null).show();
+                    }else{
+                        new AlertDialog.Builder(this).setTitle("Локальный аккаунт").setMessage("Регистрация хранится только на этом устройстве. Это пока не Google-аккаунт и не облачная синхронизация.").setPositiveButton("ОК",null).show();
+                    }
+                }
             })
             .setNegativeButton("Назад",null)
+            .show();
+    }
+
+    private void showRegister(){
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(40,10,40,0);
+        EditText name=new EditText(this);
+        name.setHint("Имя игрока");
+        EditText pin=new EditText(this);
+        pin.setHint("PIN (4–8 цифр)");
+        pin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        box.addView(name); box.addView(pin);
+
+        AlertDialog dlg=new AlertDialog.Builder(this)
+            .setTitle("👤 Регистрация Купчино")
+            .setMessage("Создай локальный профиль. Не используй пароль от Google или других сайтов.")
+            .setView(box)
+            .setPositiveButton("Зарегистрироваться",null)
+            .setNegativeButton("Отмена",null)
+            .create();
+        dlg.setOnShowListener(x->dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            String n=name.getText().toString().trim();
+            String p=pin.getText().toString().trim();
+            if(n.length()<2){name.setError("Минимум 2 символа");return;}
+            if(p.length()<4 || p.length()>8){pin.setError("Нужно 4–8 цифр");return;}
+            accountPrefs.edit().putBoolean("registered",true).putString("username",n).putString("pin",p).apply();
+            dlg.dismiss();
+            new AlertDialog.Builder(this).setTitle("SUCCESS ✅").setMessage("Аккаунт "+n+" создан ❤️").setPositiveButton("ОК",null).show();
+        }));
+        dlg.show();
+    }
+
+    private void showAccountInfo(){
+        String n=accountPrefs.getString("username","Игрок");
+        new AlertDialog.Builder(this)
+            .setTitle("👤 "+n)
+            .setMessage("Локальный аккаунт Купчино активен ✅\n\nGoogle-вход и облачная синхронизация пока не подключены.")
+            .setPositiveButton("ОК",null)
             .show();
     }
 
