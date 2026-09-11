@@ -17,7 +17,7 @@ public class GameView extends View {
     private final Random rnd = new Random();
     private final ArrayList<Pipe> pipes = new ArrayList<>();
     private final SharedPreferences prefs;
-    private float birdX, birdY, vy;
+    private float birdX, birdY, vy;\n    private float birdAnimTime = 0f;
     private float spawnTimer = 0;
     private long lastTime;
     private boolean running = false;
@@ -73,7 +73,7 @@ public class GameView extends View {
 
     private void reset(){
         pipes.clear(); score = 0; vy = 0; spawnTimer = 0; gameOver = false; running = false; paused = false;
-        birdX = getWidth() * .27f; birdY = getHeight() * .45f;
+        birdX = getWidth() * .27f; birdY = getHeight() * .45f; birdAnimTime = 0f;
         lastTime = System.nanoTime(); invalidate();
     }
 
@@ -113,7 +113,7 @@ public class GameView extends View {
             if(!q.counted && q.x + dp(70) < birdX){ q.counted=true; score++; }
             if(q.x < -dp(90)) pipes.remove(i);
         }
-        if(birdY < dp(10) || birdY > getHeight()-dp(55)) die();
+        float wrapTop = -dp(22);\n        float wrapBottom = getHeight() - dp(58) + dp(22);\n        if(birdY < wrapTop){\n            birdY = wrapBottom;\n        } else if(birdY > wrapBottom){\n            birdY = wrapTop;\n        }
         float br = dp(18);
         for(Pipe q:pipes){
             float pw=dp(72), gap=dp(175);
@@ -164,13 +164,33 @@ public class GameView extends View {
 
     private void drawBird(Canvas c){
         float r=dp(19), x=birdX, y=birdY;
-        p.setColor(birdColor); c.drawOval(new RectF(x-r*1.2f,y-r,x+r*1.2f,y+r),p);
-        p.setColor(darken(birdColor)); c.drawOval(new RectF(x-r*.85f,y-r*.1f,x+r*.25f,y+r*.75f),p);
-        p.setColor(Color.WHITE); c.drawCircle(x+r*.55f,y-r*.35f,r*.42f,p);
-        p.setColor(Color.BLACK); c.drawCircle(x+r*.67f,y-r*.35f,r*.16f,p);
-        Path beak=new Path(); beak.moveTo(x+r*.95f,y-r*.1f); beak.lineTo(x+r*1.75f,y+r*.15f); beak.lineTo(x+r*.95f,y+r*.45f); beak.close();
-        p.setColor(beakColor); c.drawPath(beak,p);
+        float tilt = Math.max(-25f, Math.min(55f, vy / dp(8f)));
+        float wingBob = (float)Math.sin(birdAnimTime * 16f) * r * .28f;
+
+        c.save();
+        c.rotate(tilt, x, y);
+
+        p.setColor(birdColor);
+        c.drawOval(new RectF(x-r*1.2f,y-r,x+r*1.2f,y+r),p);
+
+        p.setColor(darken(birdColor));
+        c.drawOval(new RectF(x-r*.85f,y-r*.05f+wingBob,x+r*.15f,y+r*.78f+wingBob),p);
+
+        p.setColor(Color.WHITE);
+        c.drawCircle(x+r*.55f,y-r*.35f,r*.42f,p);
+        p.setColor(Color.BLACK);
+        c.drawCircle(x+r*.67f,y-r*.35f,r*.16f,p);
+
+        Path beak=new Path();
+        beak.moveTo(x+r*.95f,y-r*.1f);
+        beak.lineTo(x+r*1.75f,y+r*.15f);
+        beak.lineTo(x+r*.95f,y+r*.45f);
+        beak.close();
+        p.setColor(beakColor);
+        c.drawPath(beak,p);
+
         drawHat(c,x,y-r*.9f,r);
+        c.restore();
     }
 
     private int darken(int c){ return Color.rgb((int)(Color.red(c)*.75),(int)(Color.green(c)*.75),(int)(Color.blue(c)*.75)); }
