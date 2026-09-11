@@ -1,0 +1,13 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.6",
+  "Category": "Games",
+  "Description": "Kupchino Drive - 3D parking and free-drive prototype",
+  "Modules": [
+    {
+      "Name": "KupchinoDrive",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
