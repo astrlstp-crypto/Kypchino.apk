@@ -17,7 +17,8 @@ public class GameView extends View {
     private final Random rnd = new Random();
     private final ArrayList<Pipe> pipes = new ArrayList<>();
     private final SharedPreferences prefs;
-    private float birdX, birdY, vy;\n    private float birdAnimTime = 0f;
+    private float birdX, birdY, vy;
+    private float birdAnimTime = 0f;
     private float spawnTimer = 0;
     private long lastTime;
     private boolean running = false;
@@ -113,7 +114,13 @@ public class GameView extends View {
             if(!q.counted && q.x + dp(70) < birdX){ q.counted=true; score++; }
             if(q.x < -dp(90)) pipes.remove(i);
         }
-        float wrapTop = -dp(22);\n        float wrapBottom = getHeight() - dp(58) + dp(22);\n        if(birdY < wrapTop){\n            birdY = wrapBottom;\n        } else if(birdY > wrapBottom){\n            birdY = wrapTop;\n        }
+        float wrapTop = -dp(22);
+        float wrapBottom = getHeight() - dp(58) + dp(22);
+        if(birdY < wrapTop){
+            birdY = wrapBottom;
+        } else if(birdY > wrapBottom){
+            birdY = wrapTop;
+        }
         float br = dp(18);
         for(Pipe q:pipes){
             float pw=dp(72), gap=dp(175);
