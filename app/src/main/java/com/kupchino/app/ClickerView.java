@@ -221,7 +221,16 @@ public class ClickerView extends LinearLayout {
         };
         int ai=group-(SUFFIX.length+3);
         if(ai>=0 && ai<afterNan.length) return String.format(Locale.US,"%.2f%s",mant,afterNan[ai]);
-        return "1Debug";
+        String[] afterDebug={"Debug","SpoonNumber","GeoNumber","ZeeToNumber","Googolplexian","GoogleTgPlexian","GoogleDuPlexian"};
+        int di=ai-afterNan.length;
+        if(di==0){
+            if(mant>=100) return String.format(Locale.US,"%.0fDebug",mant);
+            if(mant>=10) return String.format(Locale.US,"%.0fDebug",mant);
+            return String.format(Locale.US,"%.0fDebug",mant);
+        }
+        int ni=di;
+        if(ni>=1 && ni<afterDebug.length) return "1"+afterDebug[ni];
+        return "1GoogleDuPlexian";
     }
 
     private void refresh(){
