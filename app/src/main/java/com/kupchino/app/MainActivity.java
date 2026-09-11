@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -17,12 +18,16 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
     private final int[] birdColors = {0xFFFFD728,0xFFFF5D73,0xFF4FD1FF,0xFF7EE787,0xFFC77DFF,0xFFFFFFFF};
     private final int[] beakColors = {0xFFFF7814,0xFFFFFF4A,0xFFFF4D4D,0xFF73E6FF,0xFFFFFFFF};
+    private final int[] driveFpsOptions = {30,45,60,75,90,120,144,165,240};
     private int birdIndex=0, beakIndex=0, hatIndex=0;
     private final CalmMusic calmMusic = new CalmMusic();
     private boolean musicEnabled=true;
     private boolean vibrationEnabled=true;
     private boolean keepScreenOn=false;
     private boolean fullscreenEnabled=false;
+    private boolean driveVsyncEnabled=true;
+    private int driveFpsLimit=120;
+    private DrivePerformance3DView activeDrive;
     private android.content.SharedPreferences accountPrefs;
     private android.content.SharedPreferences settingsPrefs;
 
@@ -34,6 +39,9 @@ public class MainActivity extends Activity {
         vibrationEnabled=settingsPrefs.getBoolean("vibration",true);
         keepScreenOn=settingsPrefs.getBoolean("keep_screen_on",false);
         fullscreenEnabled=settingsPrefs.getBoolean("fullscreen",false);
+        driveVsyncEnabled=settingsPrefs.getBoolean("drive_vsync",true);
+        driveFpsLimit=settingsPrefs.getInt("drive_fps_limit",120);
+        driveFpsLimit=Math.max(30,Math.min(240,driveFpsLimit));
         applyWindowSettings();
         if(musicEnabled) calmMusic.start();
         showHome();
@@ -73,7 +81,18 @@ public class MainActivity extends Activity {
         return t;
     }
 
+    private void stopActiveDrive(){
+        if(activeDrive!=null){
+            try{ activeDrive.onPause(); }catch(Exception ignored){}
+            activeDrive=null;
+        }
+        WindowManager.LayoutParams lp=getWindow().getAttributes();
+        lp.preferredRefreshRate=0f;
+        getWindow().setAttributes(lp);
+    }
+
     private void showHome(){
+        stopActiveDrive();
         LinearLayout root=base();
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(title("КУПЧИНО 🥶❤️"),new LinearLayout.LayoutParams(-1,-2));
@@ -87,7 +106,7 @@ public class MainActivity extends Activity {
         root.addView(image,ip);
 
         TextView sub=new TextView(this);
-        sub.setText("легендарное место 🤑\n+ KUPCHINO DRIVE 3D 🚗\nВСЁ В ОДНОМ ПРИЛОЖЕНИИ ✅");
+        sub.setText("легендарное место 🤑\n+ KUPCHINO DRIVE 3D 🚗\nMAX 2048 • V-SYNC • ДО 240 FPS ✅");
         sub.setTextColor(Color.WHITE);
         sub.setTextSize(18);
         sub.setGravity(Gravity.CENTER);
@@ -112,7 +131,22 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
+    private void setDriveButtonHold(Button button, java.util.function.Consumer<Boolean> setter){
+        button.setOnTouchListener((v,e)->{
+            int action=e.getActionMasked();
+            boolean down=action!=MotionEvent.ACTION_UP&&action!=MotionEvent.ACTION_CANCEL;
+            setter.accept(down);
+            return true;
+        });
+    }
+
     private void showDrive3D(){
+        stopActiveDrive();
+
+        WindowManager.LayoutParams lp=getWindow().getAttributes();
+        lp.preferredRefreshRate=(float)driveFpsLimit;
+        getWindow().setAttributes(lp);
+
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.BLACK);
@@ -125,16 +159,59 @@ public class MainActivity extends Activity {
 
         Button back=btn("← Купчино");
         TextView label=new TextView(this);
-        label.setText("🚗 KUPCHINO DRIVE 3D • ВСТРОЕНО");
+        label.setText("🚗 DRIVE MAX 2048 • "+driveFpsLimit+" FPS • V-SYNC "+(driveVsyncEnabled?"ON":"OFF"));
         label.setTextColor(Color.WHITE);
         label.setGravity(Gravity.CENTER);
+        label.setTextSize(13);
         label.getPaint().setFakeBoldText(true);
-        back.setOnClickListener(v->showHome());
 
-        bar.addView(back,new LinearLayout.LayoutParams(0,-2,0.35f));
-        bar.addView(label,new LinearLayout.LayoutParams(0,-1,0.65f));
+        activeDrive=new DrivePerformance3DView(this);
+        activeDrive.setPerformance(driveFpsLimit,driveVsyncEnabled);
+        DrivePerformance3DView driveView=activeDrive;
+
+        back.setOnClickListener(v->{
+            driveView.onPause();
+            activeDrive=null;
+            showHome();
+        });
+
+        bar.addView(back,new LinearLayout.LayoutParams(0,-2,0.32f));
+        bar.addView(label,new LinearLayout.LayoutParams(0,-1,0.68f));
         root.addView(bar,new LinearLayout.LayoutParams(-1,-2));
-        root.addView(new Drive3DView(this),new LinearLayout.LayoutParams(-1,0,1f));
+        root.addView(driveView,new LinearLayout.LayoutParams(-1,0,1f));
+
+        LinearLayout missionBar=new LinearLayout(this);
+        missionBar.setGravity(Gravity.CENTER);
+        missionBar.setPadding(6,4,6,4);
+        missionBar.setBackgroundColor(0xFF101419);
+        Button free=btn("🆓 FREE DRIVE");
+        Button mission=btn("🅿 NEW MISSION");
+        free.setOnClickListener(v->{
+            driveView.setFreeMode(!driveView.isFreeMode());
+            free.setText(driveView.isFreeMode()?"🆓 FREE: ON":"🆓 FREE DRIVE");
+        });
+        mission.setOnClickListener(v->{ driveView.newMission(); free.setText("🆓 FREE DRIVE"); });
+        missionBar.addView(free,new LinearLayout.LayoutParams(0,-2,1f));
+        missionBar.addView(mission,new LinearLayout.LayoutParams(0,-2,1f));
+        root.addView(missionBar,new LinearLayout.LayoutParams(-1,-2));
+
+        LinearLayout controls=new LinearLayout(this);
+        controls.setGravity(Gravity.CENTER);
+        controls.setPadding(6,4,6,8);
+        controls.setBackgroundColor(0xFF0B0E12);
+        Button left=btn("◀");
+        Button brake=btn("BRAKE");
+        Button gas=btn("GAS");
+        Button right=btn("▶");
+        left.setTextSize(20); right.setTextSize(20); gas.setTextSize(18); brake.setTextSize(18);
+        setDriveButtonHold(left,driveView::setLeft);
+        setDriveButtonHold(right,driveView::setRight);
+        setDriveButtonHold(gas,driveView::setGas);
+        setDriveButtonHold(brake,driveView::setBrake);
+        LinearLayout.LayoutParams cw=new LinearLayout.LayoutParams(0,-2,1f);
+        controls.addView(left,cw); controls.addView(brake,cw); controls.addView(gas,cw); controls.addView(right,cw);
+        root.addView(controls,new LinearLayout.LayoutParams(-1,-2));
+
         setContentView(root);
     }
 
@@ -155,7 +232,28 @@ public class MainActivity extends Activity {
         return t;
     }
 
+    private void showFpsPicker(){
+        String[] labels=new String[driveFpsOptions.length];
+        int selected=0;
+        for(int i=0;i<driveFpsOptions.length;i++){
+            labels[i]=driveFpsOptions[i]+" FPS"+(driveFpsOptions[i]==240?" 🚀":"");
+            if(driveFpsOptions[i]==driveFpsLimit) selected=i;
+        }
+        final int checked=selected;
+        new AlertDialog.Builder(this)
+            .setTitle("🎯 Ограничение FPS")
+            .setSingleChoiceItems(labels,checked,(dialog,which)->{
+                driveFpsLimit=driveFpsOptions[which];
+                settingsPrefs.edit().putInt("drive_fps_limit",driveFpsLimit).apply();
+                dialog.dismiss();
+                showSettings();
+            })
+            .setNegativeButton("Отмена",null)
+            .show();
+    }
+
     private void showSettings(){
+        stopActiveDrive();
         LinearLayout root=base();
         root.addView(title("⚙ НАСТРОЙКИ KUPCHINO PRO"));
 
@@ -174,9 +272,11 @@ public class MainActivity extends Activity {
         Button keep=btn(keepScreenOn?"💡 Не выключать экран: ВКЛ":"💡 Не выключать экран: ВЫКЛ");
         addButton(root,full); addButton(root,keep);
 
-        root.addView(section("🚗 KUPCHINO DRIVE"));
-        Button drive=btn("🚗 Играть в Kupchino Drive 3D внутри приложения");
-        addButton(root,drive);
+        root.addView(section("🚗 KUPCHINO DRIVE MAX"));
+        Button vsync=btn(driveVsyncEnabled?"🖥 V-Sync: ВКЛ ✅":"🖥 V-Sync: ВЫКЛ");
+        Button fps=btn("🎯 Лимит FPS: "+driveFpsLimit+" (30–240)");
+        Button drive=btn("🚗 Играть в Kupchino Drive 3D");
+        addButton(root,vsync); addButton(root,fps); addButton(root,drive);
 
         Button back=btn("← Назад");
         addButton(root,back);
@@ -190,6 +290,12 @@ public class MainActivity extends Activity {
         vibration.setOnClickListener(v->{ vibrationEnabled=!vibrationEnabled; settingsPrefs.edit().putBoolean("vibration",vibrationEnabled).apply(); showSettings(); });
         full.setOnClickListener(v->{ fullscreenEnabled=!fullscreenEnabled; settingsPrefs.edit().putBoolean("fullscreen",fullscreenEnabled).apply(); applyWindowSettings(); showSettings(); });
         keep.setOnClickListener(v->{ keepScreenOn=!keepScreenOn; settingsPrefs.edit().putBoolean("keep_screen_on",keepScreenOn).apply(); applyWindowSettings(); showSettings(); });
+        vsync.setOnClickListener(v->{
+            driveVsyncEnabled=!driveVsyncEnabled;
+            settingsPrefs.edit().putBoolean("drive_vsync",driveVsyncEnabled).apply();
+            showSettings();
+        });
+        fps.setOnClickListener(v->showFpsPicker());
         drive.setOnClickListener(v->showDrive3D());
         back.setOnClickListener(v->showHome());
 
@@ -233,6 +339,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGamesMenu(){
+        stopActiveDrive();
         LinearLayout root=base();
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(title("🎮 ИГРЫ КУПЧИНО"));
@@ -305,7 +412,19 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
-    @Override protected void onPause(){ calmMusic.stop(); super.onPause(); }
-    @Override protected void onResume(){ super.onResume(); if(musicEnabled) calmMusic.start(); }
-    @Override protected void onDestroy(){ calmMusic.stop(); super.onDestroy(); }
+    @Override protected void onPause(){
+        if(activeDrive!=null) activeDrive.onPause();
+        calmMusic.stop();
+        super.onPause();
+    }
+    @Override protected void onResume(){
+        super.onResume();
+        if(activeDrive!=null) activeDrive.onResume();
+        if(musicEnabled) calmMusic.start();
+    }
+    @Override protected void onDestroy(){
+        if(activeDrive!=null) activeDrive.onPause();
+        calmMusic.stop();
+        super.onDestroy();
+    }
 }
