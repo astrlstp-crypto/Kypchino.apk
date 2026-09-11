@@ -3,6 +3,8 @@ package com.kupchino.app;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -12,133 +14,114 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * UI shell for the true OpenGL 3D renderer. This stays inside the main Kupchino APK.
+ * One-app container for Kupchino Drive. The OpenGL renderer and all controls
+ * live inside the main Kupchino APK; no second application is launched.
  */
 public class Drive3DView extends FrameLayout {
-    private final DriveUltra3DView world;
-    private final TextView status;
-    private final Button mode;
+    private final DriveUltra3DView game;
+    private final TextView hud;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
-    public Drive3DView(Context context){
+    private final Runnable hudUpdater = new Runnable() {
+        @Override public void run() {
+            hud.setText("🚗 KUPCHINO DRIVE 3D\n"+
+                    "Графика: " + DriveUltra3DView.QUALITY_NAME + " • HIGH REFRESH\n"+
+                    game.getSpeedKmh() + " км/ч    $" + game.getMoney() +
+                    (game.isFreeMode()?"    FREE DRIVE":"    PARKING MISSION"));
+            handler.postDelayed(this,200);
+        }
+    };
+
+    public Drive3DView(Context context) {
         super(context);
         setBackgroundColor(Color.BLACK);
 
-        world=new DriveUltra3DView(context);
-        addView(world,new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.MATCH_PARENT));
+        game = new DriveUltra3DView(context);
+        addView(game,new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.MATCH_PARENT));
 
-        LinearLayout top=new LinearLayout(context);
-        top.setOrientation(LinearLayout.VERTICAL);
-        top.setPadding(dp(10),dp(8),dp(10),dp(8));
-        GradientDrawable topBg=new GradientDrawable();
-        topBg.setColor(0xAA0B1117);
-        topBg.setCornerRadius(dp(14));
-        top.setBackground(topBg);
+        hud = new TextView(context);
+        hud.setTextColor(Color.WHITE);
+        hud.setTextSize(14);
+        hud.setPadding(dp(12),dp(8),dp(12),dp(8));
+        hud.setBackground(makeBg(0xB0161A20,16));
+        hud.getPaint().setFakeBoldText(true);
+        FrameLayout.LayoutParams hp=new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT,Gravity.TOP|Gravity.START);
+        hp.setMargins(dp(10),dp(10),dp(10),0);
+        addView(hud,hp);
 
-        TextView title=new TextView(context);
-        title.setText("KUPCHINO DRIVE • 3D MAX");
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(17);
-        title.getPaint().setFakeBoldText(true);
-        top.addView(title,new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT));
+        LinearLayout modes=new LinearLayout(context);
+        modes.setOrientation(LinearLayout.HORIZONTAL);
+        modes.setGravity(Gravity.CENTER);
+        Button free=controlButton("🆓 FREE");
+        Button mission=controlButton("🅿 МИССИЯ");
+        modes.addView(free,new LinearLayout.LayoutParams(0,dp(48),1f));
+        modes.addView(mission,new LinearLayout.LayoutParams(0,dp(48),1f));
+        FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(dp(250),dp(48),Gravity.TOP|Gravity.END);
+        mp.setMargins(0,dp(10),dp(10),0);
+        addView(modes,mp);
+        free.setOnClickListener(v->game.setFreeMode(!game.isFreeMode()));
+        mission.setOnClickListener(v->game.newMission());
 
-        status=new TextView(context);
-        status.setTextColor(0xFFEAF6FF);
-        status.setTextSize(13);
-        top.addView(status,new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT));
-
-        FrameLayout.LayoutParams tp=new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT);
-        tp.gravity=Gravity.TOP|Gravity.LEFT;
-        tp.leftMargin=dp(10); tp.topMargin=dp(10);
-        addView(top,tp);
-
-        LinearLayout missionBar=new LinearLayout(context);
-        missionBar.setOrientation(LinearLayout.HORIZONTAL);
-        missionBar.setGravity(Gravity.CENTER);
-        mode=smallButton("🛣 FREE DRIVE");
-        Button mission=smallButton("🅿 NEW MISSION");
-        missionBar.addView(mode,new LinearLayout.LayoutParams(0,dp(48),1f));
-        missionBar.addView(mission,new LinearLayout.LayoutParams(0,dp(48),1f));
-
-        FrameLayout.LayoutParams mp=new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(48));
-        mp.gravity=Gravity.TOP;
-        mp.leftMargin=dp(8); mp.rightMargin=dp(8); mp.topMargin=dp(84);
-        addView(missionBar,mp);
-
-        mode.setOnClickListener(v->{
-            boolean next=!world.isFreeMode();
-            world.setFreeMode(next);
-            mode.setText(next?"🎯 MISSIONS":"🛣 FREE DRIVE");
-        });
-        mission.setOnClickListener(v->{ world.newMission(); mode.setText("🛣 FREE DRIVE"); });
-
-        LinearLayout controls=new LinearLayout(context);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setGravity(Gravity.CENTER);
+        LinearLayout bottom=new LinearLayout(context);
+        bottom.setOrientation(LinearLayout.HORIZONTAL);
+        bottom.setGravity(Gravity.CENTER);
+        bottom.setPadding(dp(8),0,dp(8),dp(12));
         Button left=controlButton("◀");
         Button right=controlButton("▶");
         Button brake=controlButton("BRAKE");
         Button gas=controlButton("GAS");
-        controls.addView(left,new LinearLayout.LayoutParams(0,dp(72),1f));
-        controls.addView(right,new LinearLayout.LayoutParams(0,dp(72),1f));
-        controls.addView(brake,new LinearLayout.LayoutParams(0,dp(72),1f));
-        controls.addView(gas,new LinearLayout.LayoutParams(0,dp(72),1f));
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dp(74),1f);
+        bp.setMargins(dp(4),0,dp(4),0);
+        bottom.addView(left,bp); bottom.addView(right,bp); bottom.addView(brake,bp); bottom.addView(gas,bp);
+        FrameLayout.LayoutParams bottomParams=new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(90),Gravity.BOTTOM);
+        addView(bottom,bottomParams);
 
-        bindHold(left,()->world.setLeft(true),()->world.setLeft(false));
-        bindHold(right,()->world.setRight(true),()->world.setRight(false));
-        bindHold(brake,()->world.setBrake(true),()->world.setBrake(false));
-        bindHold(gas,()->world.setGas(true),()->world.setGas(false));
-
-        FrameLayout.LayoutParams cp=new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT,dp(72));
-        cp.gravity=Gravity.BOTTOM;
-        cp.leftMargin=dp(8); cp.rightMargin=dp(8); cp.bottomMargin=dp(10);
-        addView(controls,cp);
-
-        post(statusLoop);
+        bindHold(left,0); bindHold(right,1); bindHold(brake,2); bindHold(gas,3);
+        handler.post(hudUpdater);
     }
 
-    private final Runnable statusLoop=new Runnable(){
-        @Override public void run(){
-            if(status!=null && world!=null){
-                status.setText("MAX • "+world.getSpeedKmh()+" km/h • $"+world.getMoney()+"\nрегиональные трассы • кольцевая • перекрёстки");
-                postDelayed(this,180);
-            }
-        }
-    };
-
-    private Button smallButton(String text){
-        Button b=new Button(getContext());
-        b.setText(text); b.setAllCaps(false); b.setTextSize(12); b.setTextColor(Color.WHITE);
-        GradientDrawable bg=new GradientDrawable();
-        bg.setColor(0xCC18222D); bg.setCornerRadius(dp(12));
-        b.setBackground(bg);
-        return b;
-    }
-
-    private Button controlButton(String text){
-        Button b=new Button(getContext());
-        b.setText(text); b.setAllCaps(false); b.setTextSize(15); b.setTextColor(Color.WHITE);
-        b.getPaint().setFakeBoldText(true);
-        GradientDrawable bg=new GradientDrawable();
-        bg.setColor(0xD9232C35); bg.setCornerRadius(dp(18));
-        bg.setStroke(dp(1),0xAAFFFFFF);
-        b.setBackground(bg);
-        return b;
-    }
-
-    private interface Action { void run(); }
-    private void bindHold(Button b,Action down,Action up){
-        b.setOnTouchListener((v,e)->{
-            if(e.getAction()==MotionEvent.ACTION_DOWN){ down.run(); v.setAlpha(0.72f); return true; }
-            if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){ up.run(); v.setAlpha(1f); return true; }
+    private void bindHold(Button button,int action){
+        button.setOnTouchListener((v,e)->{
+            boolean down=e.getAction()==MotionEvent.ACTION_DOWN || e.getAction()==MotionEvent.ACTION_MOVE;
+            if(e.getAction()==MotionEvent.ACTION_UP || e.getAction()==MotionEvent.ACTION_CANCEL) down=false;
+            if(action==0)game.setLeft(down);
+            else if(action==1)game.setRight(down);
+            else if(action==2)game.setBrake(down);
+            else game.setGas(down);
+            if(e.getAction()==MotionEvent.ACTION_UP)v.performClick();
             return true;
         });
     }
 
-    private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
+    private Button controlButton(String text){
+        Button b=new Button(getContext());
+        b.setText(text);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(15);
+        b.setAllCaps(false);
+        b.getPaint().setFakeBoldText(true);
+        b.setBackground(makeBg(0xB5222730,18));
+        return b;
+    }
+
+    private GradientDrawable makeBg(int color,int radiusDp){
+        GradientDrawable g=new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(dp(radiusDp));
+        g.setStroke(dp(1),0x66FFFFFF);
+        return g;
+    }
+
+    private int dp(int v){ return Math.round(v*getResources().getDisplayMetrics().density); }
+
+    @Override protected void onAttachedToWindow(){
+        super.onAttachedToWindow();
+        game.onResume();
+    }
 
     @Override protected void onDetachedFromWindow(){
-        removeCallbacks(statusLoop);
-        world.setGas(false); world.setBrake(false); world.setLeft(false); world.setRight(false);
+        handler.removeCallbacks(hudUpdater);
+        game.onPause();
         super.onDetachedFromWindow();
     }
 }
