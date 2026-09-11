@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
         t.setTextColor(Color.WHITE);
         t.setTextSize(28);
         t.setGravity(Gravity.CENTER);
-        t.setFakeBoldText(true);
+        t.getPaint().setFakeBoldText(true);
         t.setPadding(0,8,0,12);
         return t;
     }
@@ -139,7 +139,7 @@ public class MainActivity extends Activity {
         t.setText(text);
         t.setTextColor(0xFF8ED8FF);
         t.setTextSize(17);
-        t.setFakeBoldText(true);
+        t.getPaint().setFakeBoldText(true);
         t.setPadding(0,20,0,6);
         return t;
     }
