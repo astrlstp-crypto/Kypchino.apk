@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
+        android:name=".KupchinoApplication"
         android:theme="@style/AppTheme"
         android:label="Купчино"
         android:icon="@drawable/kupchino_icon"
@@ -7,6 +8,7 @@
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
