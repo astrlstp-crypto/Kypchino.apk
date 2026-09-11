@@ -23,11 +23,20 @@ public class MainActivity extends Activity {
     private final CalmMusic calmMusic = new CalmMusic();
     private boolean musicEnabled = true;
     private android.content.SharedPreferences accountPrefs;
+    private android.content.SharedPreferences settingsPrefs;
+    private boolean vibrationEnabled = true;
+    private boolean keepScreenOn = false;
+    private boolean fullscreenEnabled = false;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
-        musicEnabled=getSharedPreferences("settings",MODE_PRIVATE).getBoolean("music",true);
+        settingsPrefs=getSharedPreferences("settings",MODE_PRIVATE);
+        musicEnabled=settingsPrefs.getBoolean("music",true);
+        vibrationEnabled=settingsPrefs.getBoolean("vibration",true);
+        keepScreenOn=settingsPrefs.getBoolean("keep_screen_on",false);
+        fullscreenEnabled=settingsPrefs.getBoolean("fullscreen",false);
         accountPrefs=getSharedPreferences("kupchino_account",MODE_PRIVATE);
+        applyWindowSettings();
         if(musicEnabled) calmMusic.start();
         showHome();
     }
@@ -37,6 +46,7 @@ public class MainActivity extends Activity {
         b.setText(s);
         b.setAllCaps(false);
         b.setTextSize(15);
+        b.setHapticFeedbackEnabled(vibrationEnabled);
         return b;
     }
 
@@ -70,12 +80,19 @@ public class MainActivity extends Activity {
         root.addView(text);
 
         Button play=btn("▶ Играть");
-        Button settings=btn("⚙ Настройки");
+        boolean registered=accountPrefs.getBoolean("registered",false);
+        String username=accountPrefs.getString("username","");
+        Button account=btn(registered?("👤 "+username+" ✅"):"👤 Зарегистрировать аккаунт");
+        Button settings=btn("⚙ Настройки PRO");
         play.setTextSize(18);
         play.setOnClickListener(v->showGamesMenu());
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);
         bp.setMargins(0,20,0,0);
         root.addView(play,bp);
+        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);
+        ap.setMargins(0,10,0,0);
+        root.addView(account,ap);
+        account.setOnClickListener(v->{ if(registered) showAccountInfo(); else showRegister(); });
         LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,-2);
         sp.setMargins(0,10,0,0);
         root.addView(settings,sp);
@@ -84,40 +101,121 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
+    private void applyWindowSettings(){
+        if(keepScreenOn) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        if(fullscreenEnabled){
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }else{
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
+    }
+
+    private TextView sectionTitle(String text){
+        TextView t=new TextView(this);
+        t.setText(text);
+        t.setTextColor(0xFF8ED8FF);
+        t.setTextSize(17);
+        t.setFakeBoldText(true);
+        t.setPadding(0,22,0,8);
+        return t;
+    }
+
     private void showSettings(){
         boolean registered=accountPrefs.getBoolean("registered",false);
         String username=accountPrefs.getString("username","");
-        String status=musicEnabled?"ВКЛ":"ВЫКЛ";
-        String account=registered?("Аккаунт: "+username+" ✅"):("Аккаунт: не зарегистрирован");
 
-        String[] items={
-            musicEnabled?"🔇 Выключить музыку":"🎵 Включить музыку",
-            registered?"👤 Аккаунт: "+username:"👤 Зарегистрироваться",
-            registered?"🚪 Выйти из аккаунта":"ℹ Локальный аккаунт"
-        };
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(28,28,28,28);
+        root.setBackgroundColor(0xFF0B0F14);
 
-        new AlertDialog.Builder(this)
-            .setTitle("⚙ Настройки")
-            .setMessage("Тихая музыка: "+status+"\n"+account)
-            .setItems(items,(d,which)->{
-                if(which==0){
-                    musicEnabled=!musicEnabled;
-                    getSharedPreferences("settings",MODE_PRIVATE).edit().putBoolean("music",musicEnabled).apply();
-                    if(musicEnabled) calmMusic.start(); else calmMusic.stop();
-                    showSettings();
-                }else if(which==1){
-                    if(registered) showAccountInfo(); else showRegister();
-                }else if(which==2){
-                    if(registered){
-                        accountPrefs.edit().clear().apply();
-                        new AlertDialog.Builder(this).setTitle("Аккаунт").setMessage("Вы вышли из аккаунта.").setPositiveButton("ОК",null).show();
-                    }else{
-                        new AlertDialog.Builder(this).setTitle("Локальный аккаунт").setMessage("Регистрация хранится только на этом устройстве. Это пока не Google-аккаунт и не облачная синхронизация.").setPositiveButton("ОК",null).show();
-                    }
-                }
-            })
-            .setNegativeButton("Назад",null)
-            .show();
+        TextView title=new TextView(this);
+        title.setText("⚙ НАСТРОЙКИ KUPCHINO PRO");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(27);
+        title.setFakeBoldText(true);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title,new LinearLayout.LayoutParams(-1,-2));
+
+        root.addView(sectionTitle("👤 АККАУНТ"));
+        Button account=btn(registered?("Аккаунт: "+username+" ✅"):"Зарегистрировать аккаунт");
+        Button logout=btn(registered?"🚪 Выйти из аккаунта":"ℹ Как работает аккаунт");
+        root.addView(account,new LinearLayout.LayoutParams(-1,-2));
+        root.addView(logout,new LinearLayout.LayoutParams(-1,-2));
+
+        root.addView(sectionTitle("🎵 ЗВУК И ОТКЛИК"));
+        Button music=btn(musicEnabled?"🎵 Музыка: ВКЛ":"🔇 Музыка: ВЫКЛ");
+        Button vibration=btn(vibrationEnabled?"📳 Вибрация: ВКЛ":"📴 Вибрация: ВЫКЛ");
+        root.addView(music,new LinearLayout.LayoutParams(-1,-2));
+        root.addView(vibration,new LinearLayout.LayoutParams(-1,-2));
+
+        root.addView(sectionTitle("📱 ЭКРАН"));
+        Button fullscreen=btn(fullscreenEnabled?"🖥 Полноэкранный режим: ВКЛ":"🖥 Полноэкранный режим: ВЫКЛ");
+        Button keep=btn(keepScreenOn?"💡 Не выключать экран: ВКЛ":"💡 Не выключать экран: ВЫКЛ");
+        root.addView(fullscreen,new LinearLayout.LayoutParams(-1,-2));
+        root.addView(keep,new LinearLayout.LayoutParams(-1,-2));
+
+        root.addView(sectionTitle("🎮 ИГРА"));
+        Button flappy=btn("🐦 Настройки Flappy Купчино");
+        Button saves=btn("💾 Сохранения и рекорды");
+        root.addView(flappy,new LinearLayout.LayoutParams(-1,-2));
+        root.addView(saves,new LinearLayout.LayoutParams(-1,-2));
+
+        Button back=btn("← Назад");
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,-2);
+        bp.setMargins(0,26,0,0);
+        root.addView(back,bp);
+
+        account.setOnClickListener(v->{ if(registered) showAccountInfo(); else showRegister(); });
+        logout.setOnClickListener(v->{
+            if(registered){
+                accountPrefs.edit().clear().apply();
+                showSettings();
+            }else{
+                new AlertDialog.Builder(this)
+                    .setTitle("Локальный аккаунт")
+                    .setMessage("Профиль хранится на этом устройстве. Не используй пароль от Google или других сайтов.")
+                    .setPositiveButton("ОК",null).show();
+            }
+        });
+        music.setOnClickListener(v->{
+            musicEnabled=!musicEnabled;
+            settingsPrefs.edit().putBoolean("music",musicEnabled).apply();
+            if(musicEnabled) calmMusic.start(); else calmMusic.stop();
+            showSettings();
+        });
+        vibration.setOnClickListener(v->{
+            vibrationEnabled=!vibrationEnabled;
+            settingsPrefs.edit().putBoolean("vibration",vibrationEnabled).apply();
+            showSettings();
+        });
+        fullscreen.setOnClickListener(v->{
+            fullscreenEnabled=!fullscreenEnabled;
+            settingsPrefs.edit().putBoolean("fullscreen",fullscreenEnabled).apply();
+            applyWindowSettings();
+            showSettings();
+        });
+        keep.setOnClickListener(v->{
+            keepScreenOn=!keepScreenOn;
+            settingsPrefs.edit().putBoolean("keep_screen_on",keepScreenOn).apply();
+            applyWindowSettings();
+            showSettings();
+        });
+        flappy.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("🐦 Flappy Купчино")
+            .setMessage("Цвет птицы, клюва, головной убор, пауза и сохранения доступны прямо внутри игры.")
+            .setPositiveButton("ОК",null).show());
+        saves.setOnClickListener(v->new AlertDialog.Builder(this)
+            .setTitle("💾 Сохранения")
+            .setMessage("Flappy использует слоты A / B / C. Рекорды хранятся локально на устройстве.")
+            .setPositiveButton("ОК",null).show());
+        back.setOnClickListener(v->showHome());
+
+        android.widget.ScrollView scroll=new android.widget.ScrollView(this);
+        scroll.addView(root);
+        setContentView(scroll);
     }
 
     private void showRegister(){
