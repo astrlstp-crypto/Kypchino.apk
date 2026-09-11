@@ -2,7 +2,6 @@ package com.kupchino.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.InputType;
@@ -88,7 +87,7 @@ public class MainActivity extends Activity {
         root.addView(image,ip);
 
         TextView sub=new TextView(this);
-        sub.setText("легендарное место 🤑\n+ KUPCHINO DRIVE 3D 🚗");
+        sub.setText("легендарное место 🤑\n+ KUPCHINO DRIVE 3D 🚗\nВСЁ В ОДНОМ ПРИЛОЖЕНИИ ✅");
         sub.setTextColor(Color.WHITE);
         sub.setTextSize(18);
         sub.setGravity(Gravity.CENTER);
@@ -101,7 +100,7 @@ public class MainActivity extends Activity {
                 "👤 "+accountPrefs.getString("username","Игрок")+" ✅":"👤 Зарегистрировать аккаунт");
         Button settings=btn("⚙ Настройки PRO");
 
-        drive.setOnClickListener(v->launchKupchinoDrive());
+        drive.setOnClickListener(v->showDrive3D());
         play.setOnClickListener(v->showGamesMenu());
         account.setOnClickListener(v->{ if(accountPrefs.getBoolean("registered",false)) showAccountInfo(); else showRegister(); });
         settings.setOnClickListener(v->showSettings());
@@ -113,18 +112,30 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
-    private void launchKupchinoDrive(){
-        Intent launch=getPackageManager().getLaunchIntentForPackage("com.kupchino.drive");
-        if(launch!=null){
-            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(launch);
-            return;
-        }
-        new AlertDialog.Builder(this)
-            .setTitle("🚗 KUPCHINO DRIVE 3D")
-            .setMessage("3D-игра пока не установлена на телефоне. Кнопка уже готова: как только отдельный Kupchino Drive APK будет установлен, она будет запускать игру прямо отсюда 🥶")
-            .setPositiveButton("ОК",null)
-            .show();
+    private void showDrive3D(){
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+
+        LinearLayout bar=new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(8,8,8,8);
+        bar.setBackgroundColor(0xFF151A20);
+
+        Button back=btn("← Купчино");
+        TextView label=new TextView(this);
+        label.setText("🚗 KUPCHINO DRIVE 3D • ВСТРОЕНО");
+        label.setTextColor(Color.WHITE);
+        label.setGravity(Gravity.CENTER);
+        label.getPaint().setFakeBoldText(true);
+        back.setOnClickListener(v->showHome());
+
+        bar.addView(back,new LinearLayout.LayoutParams(0,-2,0.35f));
+        bar.addView(label,new LinearLayout.LayoutParams(0,-1,0.65f));
+        root.addView(bar,new LinearLayout.LayoutParams(-1,-2));
+        root.addView(new Drive3DView(this),new LinearLayout.LayoutParams(-1,0,1f));
+        setContentView(root);
     }
 
     private void applyWindowSettings(){
@@ -164,7 +175,7 @@ public class MainActivity extends Activity {
         addButton(root,full); addButton(root,keep);
 
         root.addView(section("🚗 KUPCHINO DRIVE"));
-        Button drive=btn("🚗 Запустить Kupchino Drive 3D");
+        Button drive=btn("🚗 Играть в Kupchino Drive 3D внутри приложения");
         addButton(root,drive);
 
         Button back=btn("← Назад");
@@ -179,7 +190,7 @@ public class MainActivity extends Activity {
         vibration.setOnClickListener(v->{ vibrationEnabled=!vibrationEnabled; settingsPrefs.edit().putBoolean("vibration",vibrationEnabled).apply(); showSettings(); });
         full.setOnClickListener(v->{ fullscreenEnabled=!fullscreenEnabled; settingsPrefs.edit().putBoolean("fullscreen",fullscreenEnabled).apply(); applyWindowSettings(); showSettings(); });
         keep.setOnClickListener(v->{ keepScreenOn=!keepScreenOn; settingsPrefs.edit().putBoolean("keep_screen_on",keepScreenOn).apply(); applyWindowSettings(); showSettings(); });
-        drive.setOnClickListener(v->launchKupchinoDrive());
+        drive.setOnClickListener(v->showDrive3D());
         back.setOnClickListener(v->showHome());
 
         ScrollView scroll=new ScrollView(this);
@@ -235,7 +246,7 @@ public class MainActivity extends Activity {
         flappy.setOnClickListener(v->showGame());
         tetris.setOnClickListener(v->showTetris());
         clicker.setOnClickListener(v->showClicker());
-        drive.setOnClickListener(v->launchKupchinoDrive());
+        drive.setOnClickListener(v->showDrive3D());
         back.setOnClickListener(v->showHome());
         addButton(root,mines); addButton(root,flappy); addButton(root,tetris); addButton(root,clicker); addButton(root,drive); addButton(root,back);
         setContentView(root);
