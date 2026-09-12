@@ -24,14 +24,15 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class CheatOverlayService extends Service {
-    private static final String CHANNEL = "lambocheat_overlay_v7";
-    private static final int PORT = 48769;
+    private static final String CHANNEL = "lambocheat_overlay_v8";
+    private static final int PORT = 48770;
 
     private WindowManager wm;
     private TextView bubble;
@@ -47,12 +48,14 @@ public class CheatOverlayService extends Service {
             "Спрей от насекомых", "Стиральный порошок", "Ступенька", "Швабра", "Фонарик"
     };
 
+    private interface ResultCallback { void done(boolean ok); }
+
     @Override public void onCreate() {
         super.onCreate();
-        prefs = getSharedPreferences("cheats_v7", MODE_PRIVATE);
+        prefs = getSharedPreferences("cheats_v8", MODE_PRIVATE);
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         createChannel();
-        startForeground(77, notification());
+        startForeground(78, notification());
         showBubble();
     }
 
@@ -65,8 +68,8 @@ public class CheatOverlayService extends Service {
 
     private void createChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel c = new NotificationChannel(CHANNEL, "LamboCheat V7", NotificationManager.IMPORTANCE_LOW);
-            c.setDescription("LamboCheat V7 floating menu");
+            NotificationChannel c = new NotificationChannel(CHANNEL, "LamboCheat V8", NotificationManager.IMPORTANCE_LOW);
+            c.setDescription("LamboCheat V8 floating menu");
             getSystemService(NotificationManager.class).createNotificationChannel(c);
         }
     }
@@ -75,9 +78,10 @@ public class CheatOverlayService extends Service {
         Intent open = new Intent(this, MainActivity.class);
         PendingIntent pi = PendingIntent.getActivity(this, 1, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
         return b.setSmallIcon(android.R.drawable.ic_menu_manage)
-                .setContentTitle("LamboCheat V7 запущен 🐈")
+                .setContentTitle("LamboCheat V8 запущен 🐈")
                 .setContentText("T — открыть/скрыть меню")
                 .setContentIntent(pi)
                 .setOngoing(true)
@@ -139,7 +143,7 @@ public class CheatOverlayService extends Service {
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = label("LAMBOCHEAT V7 🐈", 18, Color.WHITE); title.getPaint().setFakeBoldText(true);
+        TextView title = label("LAMBOCHEAT V8 🐈", 18, Color.WHITE); title.getPaint().setFakeBoldText(true);
         top.addView(title, new LinearLayout.LayoutParams(0, dp(50), 1f));
         Button hideTop = actionButton("✕ СКРЫТЬ");
         top.addView(hideTop, new LinearLayout.LayoutParams(dp(120), dp(46)));
@@ -151,14 +155,14 @@ public class CheatOverlayService extends Service {
         box.setOrientation(LinearLayout.VERTICAL); box.setPadding(0, dp(2), 0, dp(8));
         scroll.addView(box); outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        TextView hint = label("V7 SAFE UDP BRIDGE • port 48769", 10, 0xFFA2ACC0);
+        TextView hint = label("V8 MAIN-THREAD BRIDGE • port 48770", 10, 0xFFA2ACC0);
         box.addView(hint, lp(dp(30)));
 
-        Button ping = actionButton("🔌 Проверить связь — V7");
+        Button ping = actionButton("🔌 Проверить связь — V8");
         box.addView(ping, lp(dp(50)));
-        ping.setOnClickListener(v -> sendCommand("PING", "Связь с игрой"));
+        ping.setOnClickListener(v -> sendCommand("PING", "Связь с игрой", null));
 
-        box.addView(toggle("levitation", "Левитация", "основной FP_Mode игры", "LEV"), lp(dp(64)));
+        box.addView(toggle("levitation", "Левитация", "Fly через FP_Mode", "LEV"), lp(dp(64)));
         box.addView(toggle("noclip", "Noclip + Fly", "проходить сквозь стены", "NOCLIP"), lp(dp(64)));
         box.addView(toggle("tyson", "🐈 Режим Тайсона", "остановить маму и папу", "TYSON"), lp(dp(66)));
 
@@ -168,7 +172,7 @@ public class CheatOverlayService extends Service {
         itemBox.setOrientation(LinearLayout.VERTICAL); itemBox.setVisibility(View.GONE);
         for (int i=0;i<ITEMS.length;i++) {
             final int idx=i; Button b=smallButton((i+1)+". "+ITEMS[i]); itemBox.addView(b, lp(dp(44)));
-            b.setOnClickListener(v -> sendCommand("ITEM:"+idx, "Предмет: "+ITEMS[idx]));
+            b.setOnClickListener(v -> sendCommand("ITEM:"+idx, "Предмет: "+ITEMS[idx], null));
         }
         box.addView(itemBox, new LinearLayout.LayoutParams(-1,-2));
         items.setOnClickListener(v -> itemBox.setVisibility(itemBox.getVisibility()==View.VISIBLE ? View.GONE : View.VISIBLE));
@@ -202,41 +206,55 @@ public class CheatOverlayService extends Service {
         TextView mainText=label("",14,Color.WHITE); TextView sub=label(subtitle,10,0xFF929CB0);
         row.addView(mainText,new LinearLayout.LayoutParams(-1,dp(28)));
         row.addView(sub,new LinearLayout.LayoutParams(-1,dp(22)));
-        Runnable paint=()->mainText.setText((prefs.getBoolean(key,false)?"● ON   ":"○ OFF  ")+title); paint.run();
+        Runnable paint=()->mainText.setText((prefs.getBoolean(key,false)?"● ON   ":"○ OFF  ")+title);
+        paint.run();
         row.setOnClickListener(v->{
-            boolean on=!prefs.getBoolean(key,false);
-            prefs.edit().putBoolean(key,on).apply(); paint.run();
-            sendCommand(commandBase+":"+(on?"1":"0"), title+(on?" включена":" выключена"));
+            boolean desired=!prefs.getBoolean(key,false);
+            row.setEnabled(false);
+            sendCommand(commandBase+":"+(desired?"1":"0"), title+(desired?" включена":" выключена"), ok -> {
+                row.setEnabled(true);
+                if(ok) prefs.edit().putBoolean(key,desired).apply();
+                paint.run();
+            });
         });
         return row;
     }
 
-    private View action(String text,String command) { Button b=actionButton(text); b.setOnClickListener(v->sendCommand(command,text)); return b; }
+    private View action(String text,String command) {
+        Button b=actionButton(text);
+        b.setOnClickListener(v->sendCommand(command,text,null));
+        return b;
+    }
 
-    private void sendCommand(String command, String friendly) {
+    private void sendCommand(String command, String friendly, ResultCallback callback) {
         new Thread(() -> {
-            String result;
-            try (DatagramSocket socket = new DatagramSocket()) {
-                socket.setSoTimeout(3500);
-                byte[] data = command.getBytes(StandardCharsets.UTF_8);
-                InetAddress loopback = InetAddress.getByName("127.0.0.1");
-                socket.send(new DatagramPacket(data, data.length, loopback, PORT));
-                byte[] buf = new byte[64];
-                DatagramPacket answer = new DatagramPacket(buf, buf.length);
-                socket.receive(answer);
-                String code = new String(answer.getData(), answer.getOffset(), answer.getLength(), StandardCharsets.UTF_8).trim();
-                if ("PONG7".equals(code)) result = "Связь V7 с игрой есть ❤️";
-                else if ("OK".equals(code)) result = friendly+" ❤️";
-                else if ("NOT_READY".equals(code)) result = "Игра ещё загружается — зайди в игровую сцену и попробуй снова 🥶";
-                else if ("FAIL".equals(code)) result = "Связь есть, но нужный игровой объект сейчас не найден";
-                else if ("BAD_CMD".equals(code)) result = "Неизвестная команда V7";
-                else result = "Ответ игры V7: "+code;
+            String result; boolean ok=false;
+            try (Socket s = new Socket()) {
+                s.connect(new InetSocketAddress("127.0.0.1", PORT), 1500);
+                s.setSoTimeout(3500);
+                OutputStream out=s.getOutputStream();
+                out.write(command.getBytes(StandardCharsets.UTF_8));
+                out.flush();
+                InputStream in=s.getInputStream();
+                byte[] buf=new byte[64];
+                int n=in.read(buf);
+                String code=n>0 ? new String(buf,0,n,StandardCharsets.UTF_8).trim() : "";
+                if ("PONG8".equals(code)) { result="Связь V8 с игрой есть ❤️"; ok=true; }
+                else if ("OK".equals(code)) { result=friendly+" ❤️"; ok=true; }
+                else if ("NOT_READY".equals(code)) result="Игра ещё загружается — зайди в игровую сцену и попробуй снова 🥶";
+                else if ("FAIL".equals(code)) result="Связь есть, но нужный игровой объект не найден";
+                else if ("BUSY".equals(code)) result="Мост занят прошлой командой — нажми ещё раз через секунду";
+                else if ("BAD_CMD".equals(code)) result="Неизвестная команда V8";
+                else result="Ответ игры V8: "+code;
             } catch (Exception e) {
-                result = "Нет связи с SchoolBoy LamboV7. Запусти именно V7 и дождись игровой сцены.";
+                result="Нет связи с SchoolBoy LamboV8. Запусти именно V8 и дождись игровой сцены.";
             }
-            final String r=result;
-            main.post(() -> Toast.makeText(this,r,Toast.LENGTH_LONG).show());
-        }, "LamboCheatBridgeV7").start();
+            final String r=result; final boolean success=ok;
+            main.post(() -> {
+                Toast.makeText(this,r,Toast.LENGTH_LONG).show();
+                if(callback!=null) callback.done(success);
+            });
+        }, "LamboCheatBridgeV8").start();
     }
 
     private void styleRow(View v) { GradientDrawable d=new GradientDrawable(); d.setColor(0xFF151925); d.setCornerRadius(dp(15)); d.setStroke(dp(1),0xFF2A3143); v.setBackground(d); }
