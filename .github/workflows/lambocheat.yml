@@ -1,0 +1,50 @@
+name: Build LamboCheat APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'lambocheat/**'
+      - '.github/workflows/lambocheat.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build debug APK
+        working-directory: lambocheat
+        run: gradle --no-daemon assembleDebug
+
+      - name: Prepare APK
+        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheat.apk
+
+      - name: Publish/update LamboCheat release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: lambocheat-latest
+          name: LamboCheat latest
+          body: |
+            LamboCheat Android overlay menu for SchoolBoy Runaway.
+            Install LamboCheat.apk, allow "Display over other apps", then press CHEAT.
+          files: lambocheat/LamboCheat.apk
+          overwrite_files: true
+          make_latest: true
+          target_commitish: main
