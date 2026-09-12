@@ -6,6 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'lambobridge/native/lambob1.c'
+      - 'lambobridge/b11.patch'
       - '.github/workflows/lambob1-bridge.yml'
 
 permissions:
@@ -17,6 +18,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Apply B1.1 bridge fixes
+        shell: bash
+        run: patch -p0 < lambobridge/b11.patch
 
       - name: Find Android NDK
         id: ndk
@@ -46,10 +51,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: lambobridge-b1
-          name: Lambo B1 native bridge
+          name: Lambo B1.1 native bridge
           body: |
-            Native bridge for SchoolBoy runaway B1.
-            TCP loopback port 48771. Game commands are executed on the Unity main thread.
+            Native bridge B1.1 for SchoolBoy runaway B1.
+            Correct runtime item matching, stronger Fly/Noclip, fixed safe/basement actions,
+            and safer transport spawning. TCP loopback port 48771.
           files: liblambocheat_game.so
           overwrite_files: true
           make_latest: false
