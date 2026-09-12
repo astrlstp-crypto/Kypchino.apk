@@ -1,4 +1,4 @@
-name: Build LamboCheat APK
+name: Build LamboCheat V6 APK
 
 on:
   workflow_dispatch:
@@ -33,18 +33,19 @@ jobs:
         working-directory: lambocheat
         run: gradle --no-daemon assembleDebug
 
-      - name: Prepare APK
-        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheat.apk
+      - name: Prepare V6 APK
+        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatV6.apk
 
-      - name: Publish/update LamboCheat release
+      - name: Publish LamboCheat V6 release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lambocheat-latest
-          name: LamboCheat latest
+          tag_name: lambocheat-v6
+          name: LamboCheat V6
           body: |
-            LamboCheat Android overlay menu for SchoolBoy Runaway.
-            Install LamboCheat.apk, allow "Display over other apps", then press CHEAT.
-          files: lambocheat/LamboCheat.apk
+            LamboCheat V6 for SchoolBoy LamboV6.
+            Package: com.lambocheat.app.v6
+            Version: 0.6
+          files: lambocheat/LamboCheatV6.apk
           overwrite_files: true
           make_latest: true
           target_commitish: main
