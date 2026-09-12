@@ -1,0 +1,50 @@
+name: Build Lambo B1 native bridge
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'lambobridge/native/lambob1.c'
+      - '.github/workflows/lambob1-bridge.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find Android NDK
+        id: ndk
+        shell: bash
+        run: |
+          NDK=$(ls -d "$ANDROID_SDK_ROOT"/ndk/* | sort -V | tail -1)
+          echo "path=$NDK" >> "$GITHUB_OUTPUT"
+          echo "Using $NDK"
+
+      - name: Build arm64 bridge
+        shell: bash
+        run: |
+          CC="${{ steps.ndk.outputs.path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang"
+          "$CC" -shared -fPIC -O2 -Wall -Wextra \
+            -Wl,-soname,liblambocheat_game.so \
+            -o liblambocheat_game.so lambobridge/native/lambob1.c -ldl
+          file liblambocheat_game.so
+          readelf -Ws liblambocheat_game.so | grep lambocheat_init
+
+      - name: Publish B1 bridge release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: lambobridge-b1
+          name: Lambo B1 native bridge
+          body: |
+            Native bridge for SchoolBoy runaway B1.
+            TCP loopback port 48771. Game commands are executed on the Unity main thread.
+          files: liblambocheat_game.so
+          overwrite_files: true
+          make_latest: false
+          target_commitish: main
