@@ -17,7 +17,7 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final int OVERLAY_REQUEST = 1001;
-    private static final String LAMBO_GAME = "com.LamboCheatx.SchoolBoyRunaway";
+    private static final String LAMBO_GAME = "com.LamboCheat4.SchoolBoyRunaway";
     private static final String ORIGINAL_GAME = "com.LinkedSquad.SchoolBoyRunaway";
     private TextView status;
 
@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
         root.addView(title, new LinearLayout.LayoutParams(-1, dp(52)));
 
         TextView sub = new TextView(this);
-        sub.setText("SchoolBoy LamboV2 • real bridge menu");
+        sub.setText("SchoolBoy LamboV4 • optimized game bridge");
         sub.setTextColor(Color.rgb(159, 169, 191));
         sub.setTextSize(14);
         sub.setGravity(Gravity.CENTER);
@@ -71,18 +71,18 @@ public class MainActivity extends Activity {
         cheat.setOnClickListener(v -> enableAndLaunch());
 
         status = new TextView(this);
-        status.setText("Нажми CHEAT → разреши окно поверх приложений → SchoolBoy LamboV2 откроется сама");
+        status.setText("Нажми CHEAT → разреши окно поверх приложений → SchoolBoy LamboV4 откроется сама");
         status.setTextColor(Color.rgb(153, 164, 187));
         status.setTextSize(13);
         status.setGravity(Gravity.CENTER);
         root.addView(status, new LinearLayout.LayoutParams(-1, dp(64)));
 
-        Button launch = secondary("Запустить SchoolBoy LamboV2");
+        Button launch = secondary("Запустить SchoolBoy LamboV4");
         root.addView(launch, new LinearLayout.LayoutParams(-1, dp(56)));
         launch.setOnClickListener(v -> launchGame());
 
         TextView note = new TextView(this);
-        note.setText("Эта версия рассчитана на отдельную Lambo-сборку игры с другим package name, поэтому оригинальную SchoolBoy Runaway удалять не надо.\n\n" +
+        note.setText("V4 собрана с несжатыми Unity-данными, как в исходном APK, чтобы убрать очень долгую начальную загрузку.\n\n" +
                 "T — открыть меню • Скрыть — оставить только T • Выйти полностью — убрать оверлей.");
         note.setTextColor(Color.rgb(125, 136, 158));
         note.setTextSize(12);
@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
             return;
         }
         startOverlay();
-        status.setText("LamboCheat запущен 🐈 — открываю SchoolBoy LamboV2…");
+        status.setText("LamboCheat запущен 🐈 — открываю SchoolBoy LamboV4…");
         status.postDelayed(this::launchGame, 300);
     }
 
@@ -140,9 +140,9 @@ public class MainActivity extends Activity {
             startActivity(i);
             return;
         }
-        Toast.makeText(this, "SchoolBoy LamboV2 не установлена ❤️", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "SchoolBoy LamboV4 не установлена ❤️", Toast.LENGTH_LONG).show();
         Intent original = getPackageManager().getLaunchIntentForPackage(ORIGINAL_GAME);
-        if (original != null) status.setText("Оригинальная игра есть, но нужна отдельная SchoolBoy LamboV2.");
+        if (original != null) status.setText("Оригинальная игра есть, но нужна отдельная SchoolBoy LamboV4.");
     }
 
     private int dp(float n) {
