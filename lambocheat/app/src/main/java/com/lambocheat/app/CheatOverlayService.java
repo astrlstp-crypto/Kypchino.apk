@@ -31,8 +31,9 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class CheatOverlayService extends Service {
-    private static final String CHANNEL = "lambocheat_overlay_v5";
-    private static final int PORT = 48767;
+    private static final String CHANNEL = "lambocheat_overlay_v6";
+    private static final int PORT = 48768;
+
     private WindowManager wm;
     private TextView bubble;
     private View panel;
@@ -49,10 +50,10 @@ public class CheatOverlayService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
-        prefs = getSharedPreferences("cheats_v5", MODE_PRIVATE);
+        prefs = getSharedPreferences("cheats_v6", MODE_PRIVATE);
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         createChannel();
-        startForeground(75, notification());
+        startForeground(76, notification());
         showBubble();
     }
 
@@ -65,8 +66,8 @@ public class CheatOverlayService extends Service {
 
     private void createChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel c = new NotificationChannel(CHANNEL, "LamboCheat V5", NotificationManager.IMPORTANCE_LOW);
-            c.setDescription("LamboCheat V5 floating menu");
+            NotificationChannel c = new NotificationChannel(CHANNEL, "LamboCheat V6", NotificationManager.IMPORTANCE_LOW);
+            c.setDescription("LamboCheat V6 floating menu");
             getSystemService(NotificationManager.class).createNotificationChannel(c);
         }
     }
@@ -75,9 +76,11 @@ public class CheatOverlayService extends Service {
         Intent open = new Intent(this, MainActivity.class);
         PendingIntent pi = PendingIntent.getActivity(this, 1, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
-        Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL)
+                : new Notification.Builder(this);
         return b.setSmallIcon(android.R.drawable.ic_menu_manage)
-                .setContentTitle("LamboCheat V5 запущен 🐈")
+                .setContentTitle("LamboCheat V6 запущен 🐈")
                 .setContentText("T — открыть/скрыть меню")
                 .setContentIntent(pi)
                 .setOngoing(true)
@@ -92,12 +95,14 @@ public class CheatOverlayService extends Service {
         bubble.setTextSize(24);
         bubble.getPaint().setFakeBoldText(true);
         bubble.setGravity(Gravity.CENTER);
-        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[]{0xFF974EFF, 0xFF327CFF});
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF974EFF, 0xFF327CFF});
         g.setShape(GradientDrawable.OVAL);
         g.setStroke(dp(2), 0x99FFFFFF);
         bubble.setBackground(g);
 
-        bubbleParams = new WindowManager.LayoutParams(dp(58), dp(58), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        bubbleParams = new WindowManager.LayoutParams(dp(58), dp(58),
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         bubbleParams.gravity = Gravity.TOP | Gravity.RIGHT;
@@ -109,17 +114,19 @@ public class CheatOverlayService extends Service {
         bubble.setOnTouchListener(new View.OnTouchListener() {
             float sx, sy; int ox, oy; boolean moved;
             @Override public boolean onTouch(View v, MotionEvent e) {
-                switch (e.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        sx=e.getRawX(); sy=e.getRawY(); ox=bubbleParams.x; oy=bubbleParams.y; moved=false; return false;
-                    case MotionEvent.ACTION_MOVE:
-                        float dx=e.getRawX()-sx, dy=e.getRawY()-sy;
-                        if(Math.abs(dx)>8 || Math.abs(dy)>8){
-                            moved=true; bubbleParams.x=ox-(int)dx; bubbleParams.y=oy+(int)dy;
-                            try { wm.updateViewLayout(bubble,bubbleParams); } catch(Exception ignored) {}
-                            return true;
-                        }
-                        break;
+                if (e.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    sx=e.getRawX(); sy=e.getRawY(); ox=bubbleParams.x; oy=bubbleParams.y; moved=false;
+                    return false;
+                }
+                if (e.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                    float dx=e.getRawX()-sx, dy=e.getRawY()-sy;
+                    if (Math.abs(dx)>10 || Math.abs(dy)>10) {
+                        moved=true;
+                        bubbleParams.x=ox-(int)dx;
+                        bubbleParams.y=oy+(int)dy;
+                        try { wm.updateViewLayout(bubble,bubbleParams); } catch(Exception ignored) {}
+                        return true;
+                    }
                 }
                 return moved;
             }
@@ -129,109 +136,164 @@ public class CheatOverlayService extends Service {
     private void togglePanel() { if (panel == null) showPanel(); else hidePanel(); }
 
     private void showPanel() {
+        LinearLayout outer = new LinearLayout(this);
+        outer.setOrientation(LinearLayout.VERTICAL);
+        outer.setPadding(dp(12), dp(10), dp(12), dp(10));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xF20A0C12);
+        bg.setCornerRadius(dp(22));
+        bg.setStroke(dp(1), 0xFF353C53);
+        outer.setBackground(bg);
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = label("LAMBOCHEAT V6 🐈", 18, Color.WHITE);
+        title.getPaint().setFakeBoldText(true);
+        top.addView(title, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        Button hideTop = actionButton("✕ СКРЫТЬ");
+        top.addView(hideTop, new LinearLayout.LayoutParams(dp(120), dp(46)));
+        hideTop.setOnClickListener(v -> hidePanel());
+        outer.addView(top, new LinearLayout.LayoutParams(-1, dp(54)));
+
         ScrollView scroll = new ScrollView(this);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(14), dp(14), dp(14), dp(14));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xF20A0C12); bg.setCornerRadius(dp(22)); bg.setStroke(dp(1), 0xFF353C53);
-        box.setBackground(bg); scroll.addView(box);
+        box.setPadding(0, dp(2), 0, dp(8));
+        scroll.addView(box);
+        outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = label("LAMBOCHEAT V5 🐈", 19, Color.WHITE); title.getPaint().setFakeBoldText(true);
-        top.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        Button hideTop = actionButton("✕ УБРАТЬ");
-        top.addView(hideTop, new LinearLayout.LayoutParams(dp(112), dp(44)));
-        hideTop.setOnClickListener(v -> hidePanel());
-        box.addView(top, new LinearLayout.LayoutParams(-1, dp(52)));
-
-        TextView hint = label("V5 DIRECT BRIDGE • SchoolBoy LamboV5", 10, 0xFFA2ACC0);
-        box.addView(hint, lp(dp(32)));
+        TextView hint = label("V6 FIXED BRIDGE • port 48768", 10, 0xFFA2ACC0);
+        box.addView(hint, lp(dp(30)));
 
         Button ping = actionButton("🔌 Проверить связь с игрой");
-        box.addView(ping, lp(dp(48)));
+        box.addView(ping, lp(dp(50)));
         ping.setOnClickListener(v -> sendCommand("PING", "Связь с игрой"));
 
-        box.addView(toggle("levitation", "Левитация", "Fly / зависание", "LEV"), lp(dp(60)));
+        box.addView(toggle("levitation", "Левитация", "настоящий ToggleFlyMode", "LEV"), lp(dp(64)));
+        box.addView(toggle("noclip", "Noclip + Fly", "проходить сквозь стены", "NOCLIP"), lp(dp(64)));
         box.addView(toggle("tyson", "🐈 Режим Тайсона", "остановить маму и папу", "TYSON"), lp(dp(66)));
 
         Button items = actionButton("🎒 Выдать предмет  ▼");
         box.addView(items, lp(dp(54)));
         LinearLayout itemBox = new LinearLayout(this);
-        itemBox.setOrientation(LinearLayout.VERTICAL); itemBox.setVisibility(View.GONE);
+        itemBox.setOrientation(LinearLayout.VERTICAL);
+        itemBox.setVisibility(View.GONE);
         for (int i=0;i<ITEMS.length;i++) {
-            final int idx=i; Button b=smallButton((i+1)+". "+ITEMS[i]); itemBox.addView(b, lp(dp(44)));
+            final int idx=i;
+            Button b=smallButton((i+1)+". "+ITEMS[i]);
+            itemBox.addView(b, lp(dp(44)));
             b.setOnClickListener(v -> sendCommand("ITEM:"+idx, "Предмет: "+ITEMS[idx]));
         }
         box.addView(itemBox, new LinearLayout.LayoutParams(-1,-2));
-        items.setOnClickListener(v -> itemBox.setVisibility(itemBox.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE));
+        items.setOnClickListener(v -> itemBox.setVisibility(itemBox.getVisibility()==View.VISIBLE ? View.GONE : View.VISIBLE));
 
-        box.addView(toggle("noclip", "Noclip + Fly", "проходить сквозь стены", "NOCLIP"), lp(dp(66)));
         box.addView(action("😡 Разозлить маму", "MOM"), lp(dp(54)));
         box.addView(action("😡 Разозлить папу", "DAD"), lp(dp(54)));
         box.addView(action("🚪 Открыть потайник", "SECRET"), lp(dp(54)));
         box.addView(action("🔐 Открыть сейф", "SAFE"), lp(dp(54)));
-        box.addView(action("🏠 Открыть входную дверь", "FRONT"), lp(dp(54)));
+        box.addView(action("🔔🚪 Открыть дверь рядом со звонком", "FRONT"), lp(dp(58)));
+        box.addView(action("⬇️🚪 Открыть дверь в подвал", "BASEMENT"), lp(dp(58)));
 
-        Button hideBig = actionButton("✕ СКРЫТЬ МЕНЮ — оставить T");
-        box.addView(hideBig, lp(dp(56)));
+        Button hideBig = actionButton("✕ УБРАТЬ МЕНЮ — оставить T");
+        box.addView(hideBig, lp(dp(58)));
         hideBig.setOnClickListener(v -> hidePanel());
 
-        Button exit = actionButton("⏻ Выйти полностью — убрать T");
-        box.addView(exit, lp(dp(56)));
+        Button exit = actionButton("⏻ Выйти полностью — убрать и T");
+        box.addView(exit, lp(dp(58)));
         exit.setOnClickListener(v -> { hidePanel(); removeBubble(); stopForeground(true); stopSelf(); });
 
-        panel = scroll;
-        WindowManager.LayoutParams p = new WindowManager.LayoutParams(dp(350), dp(650), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        panel = outer;
+        WindowManager.LayoutParams p = new WindowManager.LayoutParams(dp(365), dp(660),
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
-        p.gravity = Gravity.TOP | Gravity.RIGHT; p.x=dp(12); p.y=dp(58);
+        p.gravity = Gravity.TOP | Gravity.RIGHT;
+        p.x = dp(8);
+        p.y = dp(46);
         wm.addView(panel,p);
     }
 
     private View toggle(String key, String title, String subtitle, String commandBase) {
-        LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.VERTICAL); row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(12),dp(4),dp(12),dp(4)); styleRow(row);
-        TextView mainText=label("",14,Color.WHITE); TextView sub=label(subtitle,10,0xFF929CB0);
-        row.addView(mainText,new LinearLayout.LayoutParams(-1,dp(28))); row.addView(sub,new LinearLayout.LayoutParams(-1,dp(22)));
-        Runnable paint=()->mainText.setText((prefs.getBoolean(key,false)?"● ON   ":"○ OFF  ")+title); paint.run();
-        row.setOnClickListener(v->{ boolean on=!prefs.getBoolean(key,false); prefs.edit().putBoolean(key,on).apply(); paint.run();
-            sendCommand(commandBase+":"+(on?"1":"0"), title+(on?" включён":" выключен")); });
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12),dp(4),dp(12),dp(4));
+        styleRow(row);
+        TextView mainText=label("",14,Color.WHITE);
+        TextView sub=label(subtitle,10,0xFF929CB0);
+        row.addView(mainText,new LinearLayout.LayoutParams(-1,dp(28)));
+        row.addView(sub,new LinearLayout.LayoutParams(-1,dp(22)));
+        Runnable paint=()->mainText.setText((prefs.getBoolean(key,false)?"● ON   ":"○ OFF  ")+title);
+        paint.run();
+        row.setOnClickListener(v->{
+            boolean on=!prefs.getBoolean(key,false);
+            prefs.edit().putBoolean(key,on).apply();
+            paint.run();
+            sendCommand(commandBase+":"+(on?"1":"0"), title+(on?" включена":" выключена"));
+        });
         return row;
     }
 
-    private View action(String text,String command){ Button b=actionButton(text); b.setOnClickListener(v->sendCommand(command,text)); return b; }
+    private View action(String text,String command) {
+        Button b=actionButton(text);
+        b.setOnClickListener(v->sendCommand(command,text));
+        return b;
+    }
 
     private void sendCommand(String command, String friendly) {
         new Thread(() -> {
             String result;
             try (Socket s = new Socket()) {
-                s.connect(new InetSocketAddress("127.0.0.1", PORT), 1500);
-                s.setSoTimeout(2500);
-                OutputStream out=s.getOutputStream(); out.write(command.getBytes(StandardCharsets.UTF_8)); out.flush();
-                InputStream in=s.getInputStream(); byte[] buf=new byte[32]; int n=in.read(buf);
-                String code = n>0 ? new String(buf,0,n,StandardCharsets.UTF_8).trim() : "";
-                if ("OK".equals(code)) result = friendly+" ❤️";
-                else if ("NOT_READY".equals(code)) result = "Игра ещё загружается — попробуй после входа в дом 🥶";
-                else if ("FAIL".equals(code)) result = "Команда дошла, но игровой объект/метод не сработал";
-                else if ("BAD_CMD".equals(code)) result = "Неизвестная команда LamboCheat";
+                s.connect(new InetSocketAddress("127.0.0.1", PORT), 1800);
+                s.setSoTimeout(5000);
+                OutputStream out=s.getOutputStream();
+                out.write(command.getBytes(StandardCharsets.UTF_8));
+                out.flush();
+                InputStream in=s.getInputStream();
+                byte[] buf=new byte[64];
+                int n=in.read(buf);
+                String code=n>0 ? new String(buf,0,n,StandardCharsets.UTF_8).trim() : "";
+                if ("PONG".equals(code)) result = "Связь с игрой есть ❤️";
+                else if ("OK".equals(code)) result = friendly+" ❤️";
+                else if ("NOT_READY".equals(code)) result = "Игра ещё загружается — зайди в дом и попробуй снова 🥶";
+                else if ("FAIL".equals(code)) result = "Связь есть, но игровой объект сейчас не найден";
+                else if ("BAD_CMD".equals(code)) result = "Неизвестная команда V6";
                 else result = "Ответ игры: "+code;
             } catch (Exception e) {
-                result = "Нет связи с SchoolBoy LamboV5. Сначала запусти V5 и дождись игры.";
+                result = "Нет связи с SchoolBoy LamboV6. Запусти именно V6 и дождись главной сцены.";
             }
-            final String r=result; main.post(() -> Toast.makeText(this,r,Toast.LENGTH_LONG).show());
-        }, "LamboCheatBridgeV5").start();
+            final String r=result;
+            main.post(() -> Toast.makeText(this,r,Toast.LENGTH_LONG).show());
+        }, "LamboCheatBridgeV6").start();
     }
 
-    private void styleRow(View v){ GradientDrawable d=new GradientDrawable(); d.setColor(0xFF151925); d.setCornerRadius(dp(15)); d.setStroke(dp(1),0xFF2A3143); v.setBackground(d); }
-    private Button actionButton(String text){ Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextColor(Color.WHITE); b.setTextSize(13); styleRow(b); return b; }
-    private Button smallButton(String text){ Button b=actionButton("  "+text); b.setTextSize(12); return b; }
-    private TextView label(String text,int sp,int color){ TextView t=new TextView(this); t.setText(text); t.setTextSize(sp); t.setTextColor(color); t.setGravity(Gravity.CENTER_VERTICAL); return t; }
-    private LinearLayout.LayoutParams lp(int h){ LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,h); p.setMargins(0,dp(4),0,dp(4)); return p; }
-    private void hidePanel(){ if(panel!=null){ try{wm.removeView(panel);}catch(Exception ignored){} panel=null; } }
-    private void removeBubble(){ if(bubble!=null){ try{wm.removeView(bubble);}catch(Exception ignored){} bubble=null; } }
+    private void styleRow(View v) {
+        GradientDrawable d=new GradientDrawable();
+        d.setColor(0xFF151925);
+        d.setCornerRadius(dp(15));
+        d.setStroke(dp(1),0xFF2A3143);
+        v.setBackground(d);
+    }
+    private Button actionButton(String text) {
+        Button b=new Button(this);
+        b.setText(text);
+        b.setAllCaps(false);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(13);
+        styleRow(b);
+        return b;
+    }
+    private Button smallButton(String text) { Button b=actionButton("  "+text); b.setTextSize(12); return b; }
+    private TextView label(String text,int sp,int color) {
+        TextView t=new TextView(this); t.setText(text); t.setTextSize(sp); t.setTextColor(color); t.setGravity(Gravity.CENTER_VERTICAL); return t;
+    }
+    private LinearLayout.LayoutParams lp(int h) {
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,h); p.setMargins(0,dp(4),0,dp(4)); return p;
+    }
+    private void hidePanel() { if(panel!=null){ try{wm.removeView(panel);}catch(Exception ignored){} panel=null; } }
+    private void removeBubble() { if(bubble!=null){ try{wm.removeView(bubble);}catch(Exception ignored){} bubble=null; } }
 
-    @Override public void onDestroy(){ hidePanel(); removeBubble(); super.onDestroy(); }
-    private int dp(float n){ return Math.round(n*getResources().getDisplayMetrics().density); }
+    @Override public void onDestroy() { hidePanel(); removeBubble(); super.onDestroy(); }
+    private int dp(float n) { return Math.round(n*getResources().getDisplayMetrics().density); }
 }
