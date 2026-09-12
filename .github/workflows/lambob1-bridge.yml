@@ -1,4 +1,4 @@
-name: Build Lambo B1 native bridge
+name: Build Lambo B1.1 native bridge
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'lambobridge/native/lambob1.c'
-      - 'lambobridge/b11.patch'
+      - 'lambobridge/apply_b11.py'
       - '.github/workflows/lambob1-bridge.yml'
 
 permissions:
@@ -19,9 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply B1.1 bridge fixes
+      - name: Generate B1.1 bridge source
         shell: bash
-        run: patch -p0 < lambobridge/b11.patch
+        run: python3 lambobridge/apply_b11.py
 
       - name: Find Android NDK
         id: ndk
@@ -53,7 +53,7 @@ jobs:
           tag_name: lambobridge-b1
           name: Lambo B1.1 native bridge
           body: |
-            Native bridge B1.1 for SchoolBoy runaway B1.
+            Native bridge B1.1 for SchoolBoy runaway B1.1.
             Correct runtime item matching, stronger Fly/Noclip, fixed safe/basement actions,
             and safer transport spawning. TCP loopback port 48771.
           files: liblambocheat_game.so
