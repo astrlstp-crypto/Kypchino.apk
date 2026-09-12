@@ -1,4 +1,4 @@
-name: Build LamboCheat V7 APK
+name: Build LamboCheat V8 APK
 
 on:
   workflow_dispatch:
@@ -33,20 +33,20 @@ jobs:
         working-directory: lambocheat
         run: gradle --no-daemon assembleDebug
 
-      - name: Prepare V7 APK
-        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatV7.apk
+      - name: Prepare V8 APK
+        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatV8.apk
 
-      - name: Publish LamboCheat V7 release
+      - name: Publish LamboCheat V8 release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lambocheat-v7
-          name: LamboCheat V7
+          tag_name: lambocheat-v8
+          name: LamboCheat V8
           body: |
-            LamboCheat V7 for SchoolBoy LamboV7.
-            Safe UDP bridge on port 48769.
-            Package: com.lambocheat.app.v7
-            Version: 0.7
-          files: lambocheat/LamboCheatV7.apk
+            LamboCheat V8 for SchoolBoy LamboV8.
+            Main-thread TCP bridge on port 48770.
+            Package: com.lambocheat.app.v8
+            Version: 0.8
+          files: lambocheat/LamboCheatV8.apk
           overwrite_files: true
           make_latest: true
           target_commitish: main
