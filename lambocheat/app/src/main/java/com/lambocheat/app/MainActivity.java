@@ -17,12 +17,10 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final int OVERLAY_REQUEST = 1001;
-    private static final String LAMBO_GAME = "com.LamboCheat5.SchoolBoyRunaway";
-    private static final String ORIGINAL_GAME = "com.LinkedSquad.SchoolBoyRunaway";
+    private static final String LAMBO_GAME = "com.LamboCheat6.SchoolBoyRunaway";
     private TextView status;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(buildUi());
     }
@@ -41,7 +39,7 @@ public class MainActivity extends Activity {
         root.addView(logo, new LinearLayout.LayoutParams(-1, dp(76)));
 
         TextView title = new TextView(this);
-        title.setText("LamboCheat V5");
+        title.setText("LamboCheat V6");
         title.setTextColor(Color.WHITE);
         title.setTextSize(30);
         title.setGravity(Gravity.CENTER);
@@ -49,7 +47,7 @@ public class MainActivity extends Activity {
         root.addView(title, new LinearLayout.LayoutParams(-1, dp(52)));
 
         TextView sub = new TextView(this);
-        sub.setText("SchoolBoy LamboV5 • direct IL2CPP bridge");
+        sub.setText("SchoolBoy LamboV6 • fixed native bridge");
         sub.setTextColor(Color.rgb(159, 169, 191));
         sub.setTextSize(14);
         sub.setGravity(Gravity.CENTER);
@@ -71,19 +69,18 @@ public class MainActivity extends Activity {
         cheat.setOnClickListener(v -> enableAndLaunch());
 
         status = new TextView(this);
-        status.setText("Нажми CHEAT → разреши окно поверх приложений → SchoolBoy LamboV5 откроется сама");
+        status.setText("Нажми CHEAT → разреши окно поверх приложений → SchoolBoy LamboV6 откроется сама");
         status.setTextColor(Color.rgb(153, 164, 187));
         status.setTextSize(13);
         status.setGravity(Gravity.CENTER);
-        root.addView(status, new LinearLayout.LayoutParams(-1, dp(64)));
+        root.addView(status, new LinearLayout.LayoutParams(-1, dp(70)));
 
-        Button launch = secondary("Запустить SchoolBoy LamboV5");
+        Button launch = secondary("Запустить SchoolBoy LamboV6");
         root.addView(launch, new LinearLayout.LayoutParams(-1, dp(56)));
         launch.setOnClickListener(v -> launchGame());
 
         TextView note = new TextView(this);
-        note.setText("V5 исправляет мост команд: игра отвечает OK только после настоящего вызова IL2CPP-метода.\n\n" +
-                "T — открыть/скрыть меню • ✕ УБРАТЬ — оставить только T • Выйти полностью — убрать и меню, и T.");
+        note.setText("V6 использует новый игровой мост и отдельный порт.\n\nT — открыть/скрыть меню • ✕ СКРЫТЬ — оставить только T • Выйти полностью — убрать всё.");
         note.setTextColor(Color.rgb(125, 136, 158));
         note.setTextSize(12);
         note.setPadding(0, dp(20), 0, 0);
@@ -107,29 +104,24 @@ public class MainActivity extends Activity {
 
     private void enableAndLaunch() {
         if (!Settings.canDrawOverlays(this)) {
-            status.setText("Сначала разреши LamboCheat V5 показываться поверх других приложений ❤️");
-            Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
-            startActivityForResult(i, OVERLAY_REQUEST);
+            status.setText("Разреши LamboCheat V6 показываться поверх других приложений ❤️");
+            startActivityForResult(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())), OVERLAY_REQUEST);
             return;
         }
-        startOverlay();
-        status.setText("LamboCheat V5 запущен 🐈 — открываю SchoolBoy LamboV5…");
-        status.postDelayed(this::launchGame, 300);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == OVERLAY_REQUEST) {
-            if (Settings.canDrawOverlays(this)) enableAndLaunch();
-            else status.setText("Без разрешения «поверх других приложений» меню не появится в игре.");
-        }
-    }
-
-    private void startOverlay() {
         Intent service = new Intent(this, CheatOverlayService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(service);
         else startService(service);
+        status.setText("LamboCheat V6 запущен 🐈 — открываю игру…");
+        status.postDelayed(this::launchGame, 300);
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == OVERLAY_REQUEST) {
+            if (Settings.canDrawOverlays(this)) enableAndLaunch();
+            else status.setText("Без разрешения «поверх других приложений» меню не появится.");
+        }
     }
 
     private void launchGame() {
@@ -137,11 +129,9 @@ public class MainActivity extends Activity {
         if (i != null) {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
-            return;
+        } else {
+            Toast.makeText(this, "SchoolBoy LamboV6 не установлена ❤️", Toast.LENGTH_LONG).show();
         }
-        Toast.makeText(this, "SchoolBoy LamboV5 не установлена ❤️", Toast.LENGTH_LONG).show();
-        Intent original = getPackageManager().getLaunchIntentForPackage(ORIGINAL_GAME);
-        if (original != null) status.setText("Оригинальная игра есть, но для V5 нужна отдельная SchoolBoy LamboV5.");
     }
 
     private int dp(float n) { return Math.round(n * getResources().getDisplayMetrics().density); }
