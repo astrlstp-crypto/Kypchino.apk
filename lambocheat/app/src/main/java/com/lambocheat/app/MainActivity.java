@@ -17,6 +17,8 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final int OVERLAY_REQUEST = 1001;
+    private static final String LAMBO_GAME = "com.LamboCheatx.SchoolBoyRunaway";
+    private static final String ORIGINAL_GAME = "com.LinkedSquad.SchoolBoyRunaway";
     private TextView status;
 
     @Override
@@ -47,7 +49,7 @@ public class MainActivity extends Activity {
         root.addView(title, new LinearLayout.LayoutParams(-1, dp(52)));
 
         TextView sub = new TextView(this);
-        sub.setText("SchoolBoy Runaway • floating cheat menu");
+        sub.setText("SchoolBoy LamboV2 • real bridge menu");
         sub.setTextColor(Color.rgb(159, 169, 191));
         sub.setTextSize(14);
         sub.setGravity(Gravity.CENTER);
@@ -69,20 +71,19 @@ public class MainActivity extends Activity {
         cheat.setOnClickListener(v -> enableAndLaunch());
 
         status = new TextView(this);
-        status.setText("Нажми CHEAT → разреши окно поверх приложений → игра откроется сама");
+        status.setText("Нажми CHEAT → разреши окно поверх приложений → SchoolBoy LamboV2 откроется сама");
         status.setTextColor(Color.rgb(153, 164, 187));
         status.setTextSize(13);
         status.setGravity(Gravity.CENTER);
-        root.addView(status, new LinearLayout.LayoutParams(-1, dp(58)));
+        root.addView(status, new LinearLayout.LayoutParams(-1, dp(64)));
 
-        Button launch = secondary("Просто запустить SchoolBoy Runaway");
+        Button launch = secondary("Запустить SchoolBoy LamboV2");
         root.addView(launch, new LinearLayout.LayoutParams(-1, dp(56)));
         launch.setOnClickListener(v -> launchGame());
 
         TextView note = new TextView(this);
-        note.setText("Меню запускается поверх игры. Все пункты выключены по умолчанию.\n\n" +
-                "Важно: внешний Android‑оверлей сам по себе не может менять память SchoolBoy Runaway. " +
-                "Поэтому в этой сборке меню и запуск уже работают, а игровые хуки для Fly/Noclip/предметов будут подключаться отдельно к конкретной версии игры.");
+        note.setText("Эта версия рассчитана на отдельную Lambo-сборку игры с другим package name, поэтому оригинальную SchoolBoy Runaway удалять не надо.\n\n" +
+                "T — открыть меню • Скрыть — оставить только T • Выйти полностью — убрать оверлей.");
         note.setTextColor(Color.rgb(125, 136, 158));
         note.setTextSize(12);
         note.setPadding(0, dp(20), 0, 0);
@@ -113,7 +114,7 @@ public class MainActivity extends Activity {
             return;
         }
         startOverlay();
-        status.setText("LamboCheat запущен 🐈 — открываю игру…");
+        status.setText("LamboCheat запущен 🐈 — открываю SchoolBoy LamboV2…");
         status.postDelayed(this::launchGame, 300);
     }
 
@@ -133,17 +134,15 @@ public class MainActivity extends Activity {
     }
 
     private void launchGame() {
-        Intent i = getPackageManager().getLaunchIntentForPackage("com.LinkedSquad.SchoolBoyRunaway");
+        Intent i = getPackageManager().getLaunchIntentForPackage(LAMBO_GAME);
         if (i != null) {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(i);
-        } else {
-            Toast.makeText(this, "SchoolBoy Runaway не найден", Toast.LENGTH_LONG).show();
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW,
-                        Uri.parse("market://details?id=com.LinkedSquad.SchoolBoyRunaway")));
-            } catch (Exception ignored) { }
+            return;
         }
+        Toast.makeText(this, "SchoolBoy LamboV2 не установлена ❤️", Toast.LENGTH_LONG).show();
+        Intent original = getPackageManager().getLaunchIntentForPackage(ORIGINAL_GAME);
+        if (original != null) status.setText("Оригинальная игра есть, но нужна отдельная SchoolBoy LamboV2.");
     }
 
     private int dp(float n) {
