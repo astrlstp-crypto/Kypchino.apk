@@ -1,4 +1,4 @@
-name: Build LamboCheat V8 APK
+name: Build LamboCheats B1 APK
 
 on:
   workflow_dispatch:
@@ -29,24 +29,26 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build debug APK
+      - name: Build B1 APK
         working-directory: lambocheat
         run: gradle --no-daemon assembleDebug
 
-      - name: Prepare V8 APK
-        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatV8.apk
+      - name: Prepare B1 APK
+        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatsB1.apk
 
-      - name: Publish LamboCheat V8 release
+      - name: Publish LamboCheats B1 release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lambocheat-v8
-          name: LamboCheat V8
+          tag_name: lambocheats-b1
+          name: LamboCheats B1
           body: |
-            LamboCheat V8 for SchoolBoy LamboV8.
-            Main-thread TCP bridge on port 48770.
-            Package: com.lambocheat.app.v8
-            Version: 0.8
-          files: lambocheat/LamboCheatV8.apk
+            LamboCheats B1 for SchoolBoy runaway B1.
+            Tabs: ITEMS / MODES / NPC / TRANSPORT.
+            TCP main-thread bridge on port 48771.
+            Floating LC automatically disappears after the B1 game exits.
+            Package: com.lambocheats.b1
+            Version: B1
+          files: lambocheat/LamboCheatsB1.apk
           overwrite_files: true
           make_latest: true
           target_commitish: main
