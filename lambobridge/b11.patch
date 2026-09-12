@@ -1,0 +1,223 @@
+--- lambobridge/native/lambob1.c
++++ lambobridge/native/lambob1.c
+@@ -43,8 +43,10 @@
+ typedef Il2CppObject* (*fn_runtime_invoke)(const Il2CppMethod*, void*, void**, Il2CppObject**);
+ typedef void* (*fn_thread_attach)(Il2CppDomain*);
+ typedef Il2CppField* (*fn_class_get_field_from_name)(Il2CppClass*, const char*);
++typedef void (*fn_field_get_value)(Il2CppObject*, Il2CppField*, void*);
+ typedef void (*fn_field_set_value)(Il2CppObject*, Il2CppField*, void*);
+ typedef void (*fn_field_static_set_value)(Il2CppField*, void*);
++typedef Il2CppClass* (*fn_object_get_class)(Il2CppObject*);
+ typedef Il2CppString* (*fn_string_new)(const char*);
+ 
+ static void *h_il2cpp;
+@@ -62,8 +64,10 @@
+ static fn_runtime_invoke p_runtime_invoke;
+ static fn_thread_attach p_thread_attach;
+ static fn_class_get_field_from_name p_class_get_field_from_name;
++static fn_field_get_value p_field_get_value;
+ static fn_field_set_value p_field_set_value;
+ static fn_field_static_set_value p_field_static_set_value;
++static fn_object_get_class p_object_get_class;
+ static fn_string_new p_string_new;
+ 
+ // Choreographer is intentionally loaded dynamically: no hard dependency on libandroid.
+@@ -101,8 +105,8 @@
+     RESOLVE(class_from_name); RESOLVE(image_get_class_count); RESOLVE(image_get_class);
+     RESOLVE(class_get_name); RESOLVE(class_get_namespace); RESOLVE(class_get_method_from_name);
+     RESOLVE(class_get_type); RESOLVE(type_get_object); RESOLVE(runtime_invoke); RESOLVE(thread_attach);
+-    RESOLVE(class_get_field_from_name); RESOLVE(field_set_value); RESOLVE(field_static_set_value);
+-    RESOLVE(string_new);
++    RESOLVE(class_get_field_from_name); RESOLVE(field_get_value); RESOLVE(field_set_value); RESOLVE(field_static_set_value);
++    RESOLVE(object_get_class); RESOLVE(string_new);
+ #undef RESOLVE
+     Il2CppDomain *d=p_domain_get(); if(!d) return 0; p_thread_attach(d); return 1;
+ }
+@@ -162,14 +166,43 @@
+     Il2CppField *f=p_class_get_field_from_name(c,"isOnMenuMode"); if(f) p_field_static_set_value(f,&on);
+     return f!=NULL;
+ }
++static int get_bool_field(Il2CppObject *o, Il2CppClass *c, const char *name, int *out){
++    Il2CppField *f=p_class_get_field_from_name(c,name); if(!f) return 0;
++    uint8_t v=0; p_field_get_value(o,f,&v); *out=v?1:0; return 1;
++}
++static int set_bool_field(Il2CppObject *o, Il2CppClass *c, const char *name, int value){
++    Il2CppField *f=p_class_get_field_from_name(c,name); if(!f) return 0;
++    uint8_t v=value?1:0; p_field_set_value(o,f,&v); return 1;
++}
++static int invoke_toggle_if_needed(Il2CppObject *o, Il2CppClass *c, const char *fieldName, const char *methodName, int wanted){
++    int cur=0, have=get_bool_field(o,c,fieldName,&cur);
++    const Il2CppMethod *m=p_class_get_method_from_name(c,methodName,0);
++    if(m && (!have || cur!=wanted)){ Il2CppObject *exc=NULL; p_runtime_invoke(m,o,NULL,&exc); if(exc) return 0; }
++    return set_bool_field(o,c,fieldName,wanted) || m!=NULL;
++}
++static int apply_fp_to_class(const char *name){
++    Il2CppClass *c=find_class_any(name); if(!c) return 0; Il2CppObject *o=find_one(c); if(!o) return 0;
++    int ok=0, active=(fly_state||noclip_state)?1:0;
++    int fpcur=0;
++    if(get_bool_field(o,c,"fP_Mode",&fpcur) && fpcur!=active){
++        const Il2CppMethod *ma=p_class_get_method_from_name(c,"ToggleActivateFPMode",0);
++        if(!ma) ma=p_class_get_method_from_name(c,"ToggleFPMode",0);
++        if(ma){ Il2CppObject *exc=NULL; p_runtime_invoke(ma,o,NULL,&exc); if(!exc) ok=1; }
++    }
++    ok |= set_bool_field(o,c,"fP_Mode",active);
++    ok |= invoke_toggle_if_needed(o,c,"fly_Mode","ToggleFlyMode",fly_state);
++    ok |= invoke_toggle_if_needed(o,c,"noClip_Mode","ToggleNoClipMode",noclip_state);
++    ok |= set_bool_field(o,c,"isUpdateEnabled",1);
++    return ok;
++}
+ static int apply_fp(void){
+-    Il2CppClass *c=find_class_any("FP_Mode"); if(!c) return 0; Il2CppObject *o=find_one(c); if(!o) return 0;
+-    Il2CppField *ff=p_class_get_field_from_name(c,"fly_Mode");
+-    Il2CppField *fn=p_class_get_field_from_name(c,"noClip_Mode");
+-    if(!ff||!fn) return 0;
+-    p_field_set_value(o,ff,&fly_state); p_field_set_value(o,fn,&noclip_state);
++    int ok=0;
+     if(fly_state||noclip_state) set_menu_mode(1);
+-    return 1;
++    // SchoolBoy builds contain both LinkedSquad FP_Mode and the Metel-derived controller.
++    // Update both so Fly/Noclip survive per-frame controller refreshes.
++    ok |= apply_fp_to_class("FP_Mode");
++    ok |= apply_fp_to_class("MetelFP_Mode");
++    return ok;
+ }
+ static int open_builtin_menu(void){
+     // Prefer the game's own toggle. If its object is inactive, at least enable its static menu flag.
+@@ -211,6 +244,100 @@
+     return hit>0;
+ }
+ 
++static int item_score(int ui,const char *nm){
++    if(!nm||!*nm) return 0;
++    switch(ui){
++        case 0: return contains_i(nm,"anti-fat")||contains_i(nm,"anti fat") ? 120:0; // Анти-жир
++        case 1: return contains_i(nm,"battery") ? 120:0;
++        case 2: return (contains_i(nm,"nail")&&!contains_i(nm,"pull")&&!contains_i(nm,"step")) ? 100:0;
++        case 3: return contains_i(nm,"nail pull")||contains_i(nm,"crowbar") ? 140:0;
++        case 4: return contains_i(nm,"toilet_brush")||contains_i(nm,"toilet brush") ? 140:0;
++        case 5: return contains_i(nm,"lockpick") ? 150 : ((contains_i(nm,"pin")&&!contains_i(nm,"spine")&&!contains_i(nm,"pinky"))?80:0);
++        case 6: return (contains_i(nm,"charger")&&!contains_i(nm,"connected")&&!contains_i(nm,"wireless")) ? 120:0;
++        case 7:
++            if(!contains_i(nm,"key")||contains_i(nm,"car")||contains_i(nm,"remote")||contains_i(nm,"keypad")) return 0;
++            if(contains_i(nm,"key_a_item")||contains_i(nm,"key a item")||contains_i(nm,"keyonfloor")) return 170;
++            if(contains_i(nm,"key_a")||contains_i(nm,"key a")) return 140;
++            if(contains_i(nm,"key_b")||contains_i(nm,"key b")) return 110;
++            return 50;
++        case 8: return contains_i(nm,"key_car")||contains_i(nm,"car key")||contains_i(nm,"item_keycar")||contains_i(nm,"key car") ? 180:0;
++        case 9: return contains_i(nm,"bulb") ? 130:0;
++        case 10: return contains_i(nm,"broom") ? 130:0;
++        case 11: return contains_i(nm,"hammer") ? 130:0;
++        case 12: return contains_i(nm,"meat_frozen")||contains_i(nm,"meat froz")||contains_i(nm,"frozen_meat") ? 160 : (contains_i(nm,"meat")?80:0);
++        case 13: return contains_i(nm,"screwdriver") ? 150 : (contains_i(nm,"screw")&&!contains_i(nm,"unscrew")?70:0);
++        case 14: return contains_i(nm,"sleeping pill")||contains_i(nm,"sleep")||contains_i(nm,"pill") ? 120:0;
++        case 15: return contains_i(nm,"insect_spray")||contains_i(nm,"insect spray") ? 160:0;
++        case 16: return contains_i(nm,"powder") ? 130:0;
++        case 17: return (contains_i(nm,"step")&&!contains_i(nm,"nail")) ? 100:0;
++        case 18: return contains_i(nm,"rag") ? 130:0;
++        case 19: return contains_i(nm,"flower") ? 120:0;
++        case 20: return contains_i(nm,"mop") ? 130:0;
++        case 21:
++            if(contains_i(nm,"hose_item")) return 220;
++            if(contains_i(nm,"hose garden")||contains_i(nm,"water_hose")||contains_i(nm,"water hose")) return 190;
++            return (contains_i(nm,"hose")&&!contains_i(nm,"armatur")&&!contains_i(nm,"washer_hose")) ? 140:0;
++        case 22: return contains_i(nm,"flashlight") ? 150:0;
++        default: return 0;
++    }
++}
++static int item_count(void *container, Il2CppClass *cc){
++    if(!container||!cc) return 0;
++    const Il2CppMethod *m=p_class_get_method_from_name(cc,"get_Count",0); if(!m) return 0;
++    Il2CppObject *exc=NULL; Il2CppObject *r=p_runtime_invoke(m,container,NULL,&exc); if(exc||!r) return 0;
++    int32_t n=*(int32_t*)((uint8_t*)r+sizeof(void*)*2); return (n>=0&&n<1000)?n:0;
++}
++static Il2CppObject* item_at(void *container, Il2CppClass *cc, int idx){
++    const Il2CppMethod *m=p_class_get_method_from_name(cc,"get_Item",1); if(!m) return NULL;
++    void *args[1]={&idx}; return invoke(m,container,args);
++}
++static int spawn_item_ui(int ui){
++    Il2CppClass *c=find_class_any("SpawnItems"); if(!c) return 0;
++    Il2CppObject *o=find_one(c); if(!o) return 0;
++    const Il2CppMethod *spawn=p_class_get_method_from_name(c,"SpawnItemAtIndex",1); if(!spawn) return 0;
++    Il2CppField *f=p_class_get_field_from_name(c,"itemsForSpawn"); if(!f) return 0;
++    void *container=NULL; p_field_get_value(o,f,&container); if(!container) return 0;
++    int best=-1,bestScore=0;
++    Il2CppArray *arr=(Il2CppArray*)container;
++    uintptr_t n=arr->max_length;
++    if(n>0&&n<512){
++        for(uintptr_t i=0;i<n;i++){
++            void *it=arr->vector[i]; if(!it) continue; char nm[192]=""; object_name(it,nm,sizeof(nm));
++            int sc=item_score(ui,nm); if(sc>bestScore){ bestScore=sc; best=(int)i; }
++        }
++    }else{
++        Il2CppClass *cc=p_object_get_class((Il2CppObject*)container); int count=item_count(container,cc);
++        for(int i=0;i<count;i++){
++            Il2CppObject *it=item_at(container,cc,i); if(!it) continue; char nm[192]=""; object_name(it,nm,sizeof(nm));
++            int sc=item_score(ui,nm); if(sc>bestScore){ bestScore=sc; best=i; }
++        }
++    }
++    if(best<0||bestScore<=0) return 0;
++    void *args[1]={&best}; Il2CppObject *exc=NULL; p_runtime_invoke(spawn,o,args,&exc); return exc==NULL;
++}
++
++static int instantiate_named_object(const char *kind){
++    Il2CppClass *gc=find_class("UnityEngine","GameObject"); if(!gc) gc=find_class_any("GameObject"); if(!gc) return 0;
++    Il2CppArray *arr=find_all(gc); if(!arr||arr->max_length==0||arr->max_length>50000) return 0;
++    Il2CppClass *oc=find_class("UnityEngine","Object"); if(!oc) oc=find_class_any("Object"); if(!oc) return 0;
++    const Il2CppMethod *inst=p_class_get_method_from_name(oc,"Instantiate",1); if(!inst) return 0;
++    int best=-1,bestScore=0;
++    for(uintptr_t i=0;i<arr->max_length;i++){
++        void *go=arr->vector[i]; if(!go) continue; char nm[192]=""; object_name(go,nm,sizeof(nm)); int sc=0;
++        if(eqi(kind,"CAR")){
++            if(eqi(nm,"Car")) sc=200; else if(contains_i(nm,"car")&&!contains_i(nm,"key")&&!contains_i(nm,"door")&&!contains_i(nm,"trunk")) sc=100;
++        }else if(eqi(kind,"VAN")){ if(contains_i(nm,"van")) sc=150; else if(contains_i(nm,"bus")) sc=100; }
++        else if(eqi(kind,"BIKE")){ if(contains_i(nm,"bicycle")) sc=160; else if(contains_i(nm,"bike")) sc=130; }
++        else if(eqi(kind,"SCOOTER")){ if(contains_i(nm,"scooter")) sc=160; }
++        if(sc>bestScore){ bestScore=sc; best=(int)i; }
++    }
++    if(best<0) return 0; void *orig=arr->vector[best]; void *args[1]={orig}; Il2CppObject *exc=NULL; Il2CppObject *copy=p_runtime_invoke(inst,NULL,args,&exc); return exc==NULL&&copy!=NULL;
++}
++
+ static int spawn_transport(const char *kind){
+     Il2CppClass *c=find_class_any("SpawnPrefab"); if(!c) return 0;
+     const Il2CppMethod *spawn=p_class_get_method_from_name(c,"Spawn",0); if(!spawn) return 0;
+@@ -228,8 +355,8 @@
+         else if(eqi(kind,"ANY")) match=1;
+         if(match){ Il2CppObject *exc=NULL; p_runtime_invoke(spawn,component,NULL,&exc); if(!exc){ hit++; break; } }
+     }
+-    // Fallback: if game object naming is opaque, spawn the first real SpawnPrefab component.
+-    if(hit==0&&arr->max_length>0){ for(uintptr_t i=0;i<arr->max_length;i++){ if(!arr->vector[i]) continue; Il2CppObject *exc=NULL; p_runtime_invoke(spawn,arr->vector[i],NULL,&exc); if(!exc){ hit=1; break; } } }
++    if(hit==0 && !eqi(kind,"ANY")) hit=instantiate_named_object(kind);
++    if(hit==0&&eqi(kind,"ANY")&&arr->max_length>0){ for(uintptr_t i=0;i<arr->max_length;i++){ if(!arr->vector[i]) continue; Il2CppObject *exc=NULL; p_runtime_invoke(spawn,arr->vector[i],NULL,&exc); if(!exc){ hit=1; break; } } }
+     return hit>0;
+ }
+ 
+@@ -243,22 +370,25 @@
+     int ok=0; ok|=call0_on_all("KnockingDoor","UnlockedExit"); ok|=call0_on_all("Frank","ToggleOpenMainDoor"); return ok;
+ }
+ static int do_basement(void){
+-    int ok=0; ok|=call0_on_all("FrankBasementState","Unlock"); ok|=call0_on_all("FrankBasementState","OpenDoor"); return ok;
++    int ok=0;
++    ok|=call0_on_all("MetelControlPanel","OpenDoor");
++    ok|=call0_on_all("FrankBasementState","OpenDoor");
++    return ok;
+ }
+ 
+ static int execute_cmd(const char *cmd){
+     if(!il2cpp_ready()) return 2; // NOT_READY
+-    if(strncmp(cmd,"ITEM:",5)==0){ int idx=atoi(cmd+5); return call1i("SpawnItems","SpawnItemAtIndex",idx)?1:0; }
++    if(strncmp(cmd,"ITEM:",5)==0){ int idx=atoi(cmd+5); return spawn_item_ui(idx)?1:0; }
+     if(strncmp(cmd,"FLY:",4)==0){ fly_state=atoi(cmd+4)?1:0; return apply_fp()?1:0; }
+     if(strncmp(cmd,"LEV:",4)==0){ fly_state=atoi(cmd+4)?1:0; return apply_fp()?1:0; }
+-    if(strncmp(cmd,"NOCLIP:",7)==0){ noclip_state=atoi(cmd+7)?1:0; if(noclip_state) fly_state=1; return apply_fp()?1:0; }
++    if(strncmp(cmd,"NOCLIP:",7)==0){ noclip_state=atoi(cmd+7)?1:0; return apply_fp()?1:0; }
+     if(strncmp(cmd,"TYSON:",6)==0){ int on=atoi(cmd+6); int ok=0; if(on){ ok|=call0_on_all("Mom","StopMom"); ok|=call0_on_all("Dad","StopDad"); } else { ok|=call0_on_all("Mom","MomReset"); ok|=call0_on_all("Dad","DadReset"); } return ok?1:0; }
+     if(strcmp(cmd,"MENU")==0) return open_builtin_menu()?1:0;
+     if(strcmp(cmd,"PLAYMOM")==0) return play_as_mom()?1:0;
+     if(strcmp(cmd,"MOM")==0) return call0_on_all("Mom","ForceDetectPlayer")?1:0;
+     if(strcmp(cmd,"DAD")==0) return call0_on_all("Dad","ForceDetectPlayer")?1:0;
+     if(strcmp(cmd,"SECRET")==0) return call0_on_all("CodeLock","SkipPassword")?1:0;
+-    if(strcmp(cmd,"SAFE")==0) return call0_on_all("SafeColorLock","SkipPassword")?1:0;
++    if(strcmp(cmd,"SAFE")==0){ int ok=0; ok|=call0_on_all("SafeColorLock","SkipCode"); ok|=call0_on_all("SafeColorLock","Unlock"); return ok?1:0; }
+     if(strcmp(cmd,"FRONT")==0) return do_front()?1:0;
+     if(strcmp(cmd,"BASEMENT")==0) return do_basement()?1:0;
+     if(strncmp(cmd,"SCALE:",6)==0){ char who[24]={0}; float x=1,y=1,z=1; if(sscanf(cmd+6,"%23[^:]:%f:%f:%f",who,&x,&y,&z)==4) return scale_npc(who,x,y,z)?1:0; return 0; }
