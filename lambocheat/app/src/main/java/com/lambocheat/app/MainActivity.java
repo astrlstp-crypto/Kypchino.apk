@@ -17,8 +17,7 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final int OVERLAY_REQUEST = 1001;
-    // B1 game keeps the V8 internal package so it installs as an update instead of duplicating the 230 MB game.
-    private static final String B1_GAME = "com.LamboCheat8.SchoolBoyRunaway";
+    private static final String B1_GAME = "com.LamboCheats.SchoolBoyRunaway";
     private TextView status;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
