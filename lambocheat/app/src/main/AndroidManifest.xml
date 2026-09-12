@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
-        <package android:name="com.LamboCheat8.SchoolBoyRunaway" />
+        <package android:name="com.LamboCheats.SchoolBoyRunaway" />
         <package android:name="com.LinkedSquad.SchoolBoyRunaway" />
     </queries>
 
