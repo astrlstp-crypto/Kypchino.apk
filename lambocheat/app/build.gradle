@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.lambocheat.app.v8'
+        applicationId 'com.lambocheats.b1'
         minSdk 26
         targetSdk 28
-        versionCode 8
-        versionName '0.8'
+        versionCode 101
+        versionName 'B1'
     }
 
     buildTypes {
