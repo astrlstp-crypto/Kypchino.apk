@@ -31,7 +31,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class CheatOverlayService extends Service {
-    private static final String CHANNEL = "lambocheat_overlay";
+    private static final String CHANNEL = "lambocheat_overlay_v5";
     private static final int PORT = 48767;
     private WindowManager wm;
     private TextView bubble;
@@ -49,10 +49,10 @@ public class CheatOverlayService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
-        prefs = getSharedPreferences("cheats", MODE_PRIVATE);
+        prefs = getSharedPreferences("cheats_v5", MODE_PRIVATE);
         wm = (WindowManager) getSystemService(WINDOW_SERVICE);
         createChannel();
-        startForeground(73, notification());
+        startForeground(75, notification());
         showBubble();
     }
 
@@ -65,8 +65,8 @@ public class CheatOverlayService extends Service {
 
     private void createChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel c = new NotificationChannel(CHANNEL, "LamboCheat overlay", NotificationManager.IMPORTANCE_LOW);
-            c.setDescription("LamboCheat floating menu");
+            NotificationChannel c = new NotificationChannel(CHANNEL, "LamboCheat V5", NotificationManager.IMPORTANCE_LOW);
+            c.setDescription("LamboCheat V5 floating menu");
             getSystemService(NotificationManager.class).createNotificationChannel(c);
         }
     }
@@ -77,8 +77,8 @@ public class CheatOverlayService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
         return b.setSmallIcon(android.R.drawable.ic_menu_manage)
-                .setContentTitle("LamboCheat запущен 🐈")
-                .setContentText("T — открыть меню")
+                .setContentTitle("LamboCheat V5 запущен 🐈")
+                .setContentText("T — открыть/скрыть меню")
                 .setContentIntent(pi)
                 .setOngoing(true)
                 .build();
@@ -115,7 +115,9 @@ public class CheatOverlayService extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx=e.getRawX()-sx, dy=e.getRawY()-sy;
                         if(Math.abs(dx)>8 || Math.abs(dy)>8){
-                            moved=true; bubbleParams.x=ox-(int)dx; bubbleParams.y=oy+(int)dy; wm.updateViewLayout(bubble,bubbleParams); return true;
+                            moved=true; bubbleParams.x=ox-(int)dx; bubbleParams.y=oy+(int)dy;
+                            try { wm.updateViewLayout(bubble,bubbleParams); } catch(Exception ignored) {}
+                            return true;
                         }
                         break;
                 }
@@ -137,18 +139,22 @@ public class CheatOverlayService extends Service {
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = label("LAMBOCHEAT  🐈", 20, Color.WHITE); title.getPaint().setFakeBoldText(true);
+        TextView title = label("LAMBOCHEAT V5 🐈", 19, Color.WHITE); title.getPaint().setFakeBoldText(true);
         top.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        Button hide = actionButton("Скрыть");
-        top.addView(hide, new LinearLayout.LayoutParams(dp(92), dp(44)));
-        hide.setOnClickListener(v -> hidePanel());
+        Button hideTop = actionButton("✕ УБРАТЬ");
+        top.addView(hideTop, new LinearLayout.LayoutParams(dp(112), dp(44)));
+        hideTop.setOnClickListener(v -> hidePanel());
         box.addView(top, new LinearLayout.LayoutParams(-1, dp(52)));
 
-        TextView hint = label("REAL GAME BRIDGE • SchoolBoy Runaway 1.03", 10, 0xFFA2ACC0);
+        TextView hint = label("V5 DIRECT BRIDGE • SchoolBoy LamboV5", 10, 0xFFA2ACC0);
         box.addView(hint, lp(dp(32)));
 
+        Button ping = actionButton("🔌 Проверить связь с игрой");
+        box.addView(ping, lp(dp(48)));
+        ping.setOnClickListener(v -> sendCommand("PING", "Связь с игрой"));
+
         box.addView(toggle("levitation", "Левитация", "Fly / зависание", "LEV"), lp(dp(60)));
-        box.addView(toggle("tyson", "🐈 Режим Тайсона", "родители не реагируют", "TYSON"), lp(dp(66)));
+        box.addView(toggle("tyson", "🐈 Режим Тайсона", "остановить маму и папу", "TYSON"), lp(dp(66)));
 
         Button items = actionButton("🎒 Выдать предмет  ▼");
         box.addView(items, lp(dp(54)));
@@ -168,15 +174,19 @@ public class CheatOverlayService extends Service {
         box.addView(action("🔐 Открыть сейф", "SAFE"), lp(dp(54)));
         box.addView(action("🏠 Открыть входную дверь", "FRONT"), lp(dp(54)));
 
-        Button exit = actionButton("⏻ Выйти полностью");
-        box.addView(exit, lp(dp(54)));
+        Button hideBig = actionButton("✕ СКРЫТЬ МЕНЮ — оставить T");
+        box.addView(hideBig, lp(dp(56)));
+        hideBig.setOnClickListener(v -> hidePanel());
+
+        Button exit = actionButton("⏻ Выйти полностью — убрать T");
+        box.addView(exit, lp(dp(56)));
         exit.setOnClickListener(v -> { hidePanel(); removeBubble(); stopForeground(true); stopSelf(); });
 
         panel = scroll;
-        WindowManager.LayoutParams p = new WindowManager.LayoutParams(dp(340), dp(650), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        WindowManager.LayoutParams p = new WindowManager.LayoutParams(dp(350), dp(650), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
-        p.gravity = Gravity.TOP | Gravity.RIGHT; p.x=dp(18); p.y=dp(70);
+        p.gravity = Gravity.TOP | Gravity.RIGHT; p.x=dp(12); p.y=dp(58);
         wm.addView(panel,p);
     }
 
@@ -197,16 +207,21 @@ public class CheatOverlayService extends Service {
         new Thread(() -> {
             String result;
             try (Socket s = new Socket()) {
-                s.connect(new InetSocketAddress("127.0.0.1", PORT), 900);
-                s.setSoTimeout(900);
+                s.connect(new InetSocketAddress("127.0.0.1", PORT), 1500);
+                s.setSoTimeout(2500);
                 OutputStream out=s.getOutputStream(); out.write(command.getBytes(StandardCharsets.UTF_8)); out.flush();
-                InputStream in=s.getInputStream(); byte[] buf=new byte[16]; int n=in.read(buf);
-                result = n>0 ? friendly+" ❤️" : friendly;
+                InputStream in=s.getInputStream(); byte[] buf=new byte[32]; int n=in.read(buf);
+                String code = n>0 ? new String(buf,0,n,StandardCharsets.UTF_8).trim() : "";
+                if ("OK".equals(code)) result = friendly+" ❤️";
+                else if ("NOT_READY".equals(code)) result = "Игра ещё загружается — попробуй после входа в дом 🥶";
+                else if ("FAIL".equals(code)) result = "Команда дошла, но игровой объект/метод не сработал";
+                else if ("BAD_CMD".equals(code)) result = "Неизвестная команда LamboCheat";
+                else result = "Ответ игры: "+code;
             } catch (Exception e) {
-                result = "Нет связи с игрой. Запусти Lambo-модифицированную SchoolBoy Runaway 1.03.";
+                result = "Нет связи с SchoolBoy LamboV5. Сначала запусти V5 и дождись игры.";
             }
-            final String r=result; main.post(() -> Toast.makeText(this,r,Toast.LENGTH_SHORT).show());
-        }, "LamboCheatBridge").start();
+            final String r=result; main.post(() -> Toast.makeText(this,r,Toast.LENGTH_LONG).show());
+        }, "LamboCheatBridgeV5").start();
     }
 
     private void styleRow(View v){ GradientDrawable d=new GradientDrawable(); d.setColor(0xFF151925); d.setCornerRadius(dp(15)); d.setStroke(dp(1),0xFF2A3143); v.setBackground(d); }
