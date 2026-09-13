@@ -40,6 +40,12 @@ jobs:
       - name: Prepare B1.2 APK
         run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatsB1_2.apk
 
+      - name: Upload B1.2 APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LamboCheatsB1_2
+          path: lambocheat/LamboCheatsB1_2.apk
+
       - name: Publish LamboCheats B1.2 release
         uses: softprops/action-gh-release@v2
         with:
