@@ -1,4 +1,4 @@
-name: Build LamboCheats B1.1 APK
+name: Build LamboCheats B1.2 APK
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply B1.1 UI and item mapping patch
+      - name: Apply B1.2 UI and item mapping patch
         working-directory: lambocheat
         run: python3 patch_b11.py
 
@@ -33,27 +33,27 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build B1.1 APK
+      - name: Build B1.2 APK
         working-directory: lambocheat
         run: gradle --no-daemon assembleDebug
 
-      - name: Prepare B1.1 APK
-        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatsB1.apk
+      - name: Prepare B1.2 APK
+        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatsB1_2.apk
 
-      - name: Publish LamboCheats B1.1 release
+      - name: Publish LamboCheats B1.2 release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lambocheats-b1
-          name: LamboCheats B1.1
+          tag_name: lambocheats-b12
+          name: LamboCheats B1.2
           body: |
-            LamboCheats B1.1 for SchoolBoy runaway B1.1.
-            Corrected item names/mapping, independent Fly/Noclip controls,
-            fixed action calls, and safer TRANSPORT spawning.
+            LamboCheats B1.2 for SchoolBoy runaway B1.2.
+            Selective Noclip UI: walls/ceilings passable while floor/ground stay solid.
+            Fly and NPC XYZ scale controls target the B1.2 game bridge.
             Tabs: ITEMS / MODES / NPC / TRANSPORT.
-            TCP main-thread bridge on port 48771.
-            Package: com.lambocheats.b1
-            Version: B1.1
-          files: lambocheat/LamboCheatsB1.apk
+            TCP bridge port: 48771.
+            Package: com.lambocheats.b12
+            Version: B1.2
+          files: lambocheat/LamboCheatsB1_2.apk
           overwrite_files: true
           make_latest: true
           target_commitish: main
