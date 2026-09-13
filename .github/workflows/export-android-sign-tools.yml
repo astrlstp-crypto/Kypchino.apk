@@ -1,0 +1,35 @@
+name: Export Android APK signing tools
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/export-android-sign-tools.yml'
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Locate latest build-tools
+        id: bt
+        shell: bash
+        run: |
+          BT=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -1)
+          echo "path=$BT" >> "$GITHUB_OUTPUT"
+          echo "Using $BT"
+      - name: Prepare tools
+        shell: bash
+        run: |
+          mkdir -p apk-tools/lib
+          cp "${{ steps.bt.outputs.path }}/apksigner" apk-tools/
+          cp "${{ steps.bt.outputs.path }}/lib/apksigner.jar" apk-tools/lib/
+          cp "${{ steps.bt.outputs.path }}/zipalign" apk-tools/
+          chmod +x apk-tools/apksigner apk-tools/zipalign
+          ./apk-tools/apksigner --version
+          ./apk-tools/zipalign -h >/dev/null || true
+      - name: Upload tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-tools
+          path: apk-tools
