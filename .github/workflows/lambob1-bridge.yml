@@ -1,4 +1,4 @@
-name: Build Lambo B1.1 native bridge
+name: Build Lambo B1.2 native bridge
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'lambobridge/native/lambob1.c'
-      - 'lambobridge/apply_b11.py'
+      - 'lambobridge/apply_b12.py'
       - '.github/workflows/lambob1-bridge.yml'
 
 permissions:
@@ -19,9 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate B1.1 bridge source
+      - name: Generate B1.2 bridge source
         shell: bash
-        run: python3 lambobridge/apply_b11.py
+        run: python3 lambobridge/apply_b12.py
 
       - name: Find Android NDK
         id: ndk
@@ -37,25 +37,27 @@ jobs:
           CC="${{ steps.ndk.outputs.path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang"
           "$CC" -shared -fPIC -O2 -Wall -Wextra \
             -Wl,-soname,liblambocheat_game.so \
-            -o liblambocheat_game.so lambobridge/native/lambob1.c -ldl
+            -o liblambocheat_game.so lambobridge/native/lambob12.c -ldl
           file liblambocheat_game.so
           readelf -Ws liblambocheat_game.so | grep lambocheat_init
 
       - name: Upload bridge artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lambob1-bridge
+          name: lambob12-bridge
           path: liblambocheat_game.so
 
       - name: Publish B1 bridge release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: lambobridge-b1
-          name: Lambo B1.1 native bridge
+          name: Lambo B1.2 native bridge
           body: |
-            Native bridge B1.1 for SchoolBoy runaway B1.1.
-            Correct runtime item matching, stronger Fly/Noclip, fixed safe/basement actions,
-            and safer transport spawning. TCP loopback port 48771.
+            Native bridge B1.2 for SchoolBoy runaway.
+            Noclip is selective: player ignores walls/ceilings/doors/windows while floor, ground and terrain remain solid.
+            Fly is continuously re-applied to all matching first-person controllers.
+            NPC scale is resolved by component roots + all loaded GameObjects and is re-applied periodically.
+            TCP loopback port 48771.
           files: liblambocheat_game.so
           overwrite_files: true
           make_latest: false
