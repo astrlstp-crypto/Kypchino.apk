@@ -25,9 +25,16 @@ jobs:
           cp "${{ steps.bt.outputs.path }}/apksigner" apk-tools/
           cp "${{ steps.bt.outputs.path }}/lib/apksigner.jar" apk-tools/lib/
           cp "${{ steps.bt.outputs.path }}/zipalign" apk-tools/
+          CXX=$(find "$ANDROID_SDK_ROOT" /usr -name 'libc++.so' -type f 2>/dev/null | head -1)
+          if [ -z "$CXX" ]; then
+            echo 'libc++.so not found' >&2
+            exit 1
+          fi
+          cp "$CXX" apk-tools/
           chmod +x apk-tools/apksigner apk-tools/zipalign
+          LD_LIBRARY_PATH="$PWD/apk-tools" ./apk-tools/zipalign -h >/dev/null || true
           ./apk-tools/apksigner --version
-          ./apk-tools/zipalign -h >/dev/null || true
+          echo "Copied libc++ from $CXX"
       - name: Upload tools
         uses: actions/upload-artifact@v4
         with:
