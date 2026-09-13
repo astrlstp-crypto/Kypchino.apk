@@ -1,11 +1,10 @@
-name: Build Lambo B1.2 native bridge
+name: Build Lambo Alpha native bridge
 
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
     paths:
-      - 'lambobridge/native/lambob1.c'
       - 'lambobridge/apply_b12.py'
       - '.github/workflows/lambob1-bridge.yml'
 
@@ -19,8 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate B1.2 bridge source
-        shell: bash
+      - name: Generate Alpha bridge source
         run: python3 lambobridge/apply_b12.py
 
       - name: Find Android NDK
@@ -29,9 +27,8 @@ jobs:
         run: |
           NDK=$(ls -d "$ANDROID_SDK_ROOT"/ndk/* | sort -V | tail -1)
           echo "path=$NDK" >> "$GITHUB_OUTPUT"
-          echo "Using $NDK"
 
-      - name: Build arm64 bridge
+      - name: Build arm64 Alpha bridge
         shell: bash
         run: |
           CC="${{ steps.ndk.outputs.path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang"
@@ -39,25 +36,26 @@ jobs:
             -Wl,-soname,liblambocheat_game.so \
             -o liblambocheat_game.so lambobridge/native/lambob12.c -ldl
           file liblambocheat_game.so
+          readelf -d liblambocheat_game.so | grep NEEDED
           readelf -Ws liblambocheat_game.so | grep lambocheat_init
 
-      - name: Upload bridge artifact
+      - name: Upload Alpha bridge artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lambob12-bridge
+          name: lambo-alpha-bridge
           path: liblambocheat_game.so
 
-      - name: Publish B1 bridge release
+      - name: Publish Alpha bridge release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lambobridge-b1
-          name: Lambo B1.2 native bridge
+          tag_name: lambobridge-alpha
+          name: Lambo Alpha native bridge
           body: |
-            Native bridge B1.2 for SchoolBoy runaway.
-            Noclip is selective: player ignores walls/ceilings/doors/windows while floor, ground and terrain remain solid.
-            Fly is continuously re-applied to all matching first-person controllers.
-            NPC scale is resolved by component roots + all loaded GameObjects and is re-applied periodically.
-            TCP loopback port 48771.
+            Alpha bridge for SchoolBoy Runaway [Alpha].
+            Exact FP_Mode namespaces, selective wall/ceiling noclip,
+            exact SpawnItems.items lookup, exact AI component scaling,
+            corrected safe/front-door calls and explicit error responses.
+            TCP loopback port 48772.
           files: liblambocheat_game.so
           overwrite_files: true
           make_latest: false
