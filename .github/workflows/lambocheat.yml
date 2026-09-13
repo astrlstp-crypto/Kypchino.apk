@@ -1,4 +1,4 @@
-name: Build LamboCheats B1.2 APK
+name: Build LamboCheats Alpha APK
 
 on:
   workflow_dispatch:
@@ -18,9 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply B1.2 UI and item mapping patch
+      - name: Apply Alpha patch
         working-directory: lambocheat
-        run: python3 patch_b11.py
+        run: python3 patch_alpha.py
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -33,33 +33,34 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build B1.2 APK
+      - name: Build Alpha APK
         working-directory: lambocheat
         run: gradle --no-daemon assembleDebug
 
-      - name: Prepare B1.2 APK
-        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheatsB1_2.apk
+      - name: Prepare Alpha APK
+        run: cp lambocheat/app/build/outputs/apk/debug/app-debug.apk lambocheat/LamboCheats_Alpha.apk
 
-      - name: Upload B1.2 APK artifact
+      - name: Upload Alpha APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LamboCheatsB1_2
-          path: lambocheat/LamboCheatsB1_2.apk
+          name: LamboCheats_Alpha
+          path: lambocheat/LamboCheats_Alpha.apk
 
-      - name: Publish LamboCheats B1.2 release
+      - name: Publish LamboCheats Alpha release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: lambocheats-b12
-          name: LamboCheats B1.2
+          tag_name: lambocheats-alpha
+          name: LamboCheats [Alpha]
           body: |
-            LamboCheats B1.2 for SchoolBoy runaway B1.2.
-            Selective Noclip UI: walls/ceilings passable while floor/ground stay solid.
-            Fly and NPC XYZ scale controls target the B1.2 game bridge.
-            Tabs: ITEMS / MODES / NPC / TRANSPORT.
-            TCP bridge port: 48771.
-            Package: com.lambocheats.b12
-            Version: B1.2
-          files: lambocheat/LamboCheatsB1_2.apk
+            LamboCheats [Alpha] for SchoolBoy Runaway [Alpha].
+            Port 48772 / PONGALPHA.
+            Exact item-code lookup through SpawnItems.items.
+            Fly targets both exact FP_Mode implementations.
+            Noclip ignores wall/ceiling/door/window colliders while keeping floor/ground solid.
+            NPC XYZ uses exact AI.Mom / AI.Dad / AI.Dog / AI.Andrew + AI.Igor components.
+            Detailed ERR:* diagnostics are shown instead of silent button failures.
+            Package: com.lambocheats.alpha
+          files: lambocheat/LamboCheats_Alpha.apk
           overwrite_files: true
           make_latest: true
           target_commitish: main
