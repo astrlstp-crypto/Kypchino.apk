@@ -68,6 +68,13 @@ public class MainActivity extends Activity {
         Window window = getWindow();
         window.setStatusBarColor(Color.BLACK);
         window.setNavigationBarColor(Color.BLACK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.setStatusBarContrastEnforced(false);
+            window.setNavigationBarContrastEnforced(false);
+        }
         showIntro();
     }
 
@@ -198,6 +205,7 @@ public class MainActivity extends Activity {
     private void hideSystemBars() {
         Window window = getWindow();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false);
             WindowInsetsController controller = window.getInsetsController();
             if (controller != null) {
                 controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
@@ -228,18 +236,36 @@ public class MainActivity extends Activity {
 
     private void showNoCommandImage() {
         imageScreenActive = true;
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Window window = getWindow();
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         hideSystemBars();
         registerScreenOffReceiver();
 
         FrameLayout screen = new FrameLayout(this);
         screen.setBackgroundColor(Color.BLACK);
+        screen.setFitsSystemWindows(false);
+
         ImageView image = new ImageView(this);
         image.setImageResource(R.drawable.no_command);
         image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        image.setAdjustViewBounds(false);
+        image.setCropToPadding(false);
         image.setBackgroundColor(Color.BLACK);
-        screen.addView(image, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        FrameLayout.LayoutParams imageParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER
+        );
+        screen.addView(image, imageParams);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            screen.setOnApplyWindowInsetsListener((v, insets) -> WindowInsets.CONSUMED);
+        }
+
         setContentView(screen);
+        screen.post(this::hideSystemBars);
 
         // The prank screen stays visible until the user presses the physical power button once.
         // Android itself handles turning the screen off; ACTION_SCREEN_OFF then closes this app.
