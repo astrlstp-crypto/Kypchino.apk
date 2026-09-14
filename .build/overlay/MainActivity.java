@@ -2,9 +2,14 @@ package com.example.arabicprank;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -13,22 +18,24 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private FrameLayout root;
     private CountDownTimer warningTimer;
-    private CountDownTimer imageTimer;
     private ToneGenerator toneGenerator;
     private final Handler musicHandler = new Handler(Looper.getMainLooper());
     private int musicStep = 0;
     private boolean musicPlaying = false;
+    private boolean imageScreenActive = false;
+    private boolean screenReceiverRegistered = false;
 
     private final int[] spookyTones = {
             ToneGenerator.TONE_DTMF_1, ToneGenerator.TONE_DTMF_4,
@@ -43,6 +50,15 @@ public class MainActivity extends Activity {
             toneGenerator.startTone(spookyTones[musicStep % spookyTones.length], 280);
             musicStep++;
             musicHandler.postDelayed(this, 500);
+        }
+    };
+
+    private final BroadcastReceiver screenOffReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (imageScreenActive && Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                finishAndRemoveTask();
+            }
         }
     };
 
@@ -107,8 +123,8 @@ public class MainActivity extends Activity {
 
     private void showIntro() {
         if (warningTimer != null) warningTimer.cancel();
-        if (imageTimer != null) imageTimer.cancel();
         stopCountdownMusic();
+        imageScreenActive = false;
 
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
@@ -170,6 +186,7 @@ public class MainActivity extends Activity {
                 long seconds = Math.max(1, (millisUntilFinished + 999) / 1000);
                 timerText.setText(String.valueOf(seconds));
             }
+
             @Override public void onFinish() {
                 stopCountdownMusic();
                 if (dialog.isShowing()) dialog.dismiss();
@@ -178,8 +195,43 @@ public class MainActivity extends Activity {
         }.start();
     }
 
+    private void hideSystemBars() {
+        Window window = getWindow();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            window.getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            );
+        }
+    }
+
+    private void registerScreenOffReceiver() {
+        if (screenReceiverRegistered) return;
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(screenOffReceiver, filter);
+        }
+        screenReceiverRegistered = true;
+    }
+
     private void showNoCommandImage() {
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        imageScreenActive = true;
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        hideSystemBars();
+        registerScreenOffReceiver();
+
         FrameLayout screen = new FrameLayout(this);
         screen.setBackgroundColor(Color.BLACK);
         ImageView image = new ImageView(this);
@@ -189,20 +241,27 @@ public class MainActivity extends Activity {
         screen.addView(image, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(screen);
 
-        imageTimer = new CountDownTimer(60_000, 1_000) {
-            @Override public void onTick(long millisUntilFinished) {}
-            @Override public void onFinish() {
-                Toast.makeText(MainActivity.this, "مزحة فقط — لم يتم حذف أي ملفات", Toast.LENGTH_LONG).show();
-                screen.postDelayed(() -> finishAndRemoveTask(), 2800);
-            }
-        }.start();
+        // The prank screen stays visible until the user presses the physical power button once.
+        // Android itself handles turning the screen off; ACTION_SCREEN_OFF then closes this app.
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && imageScreenActive) {
+            hideSystemBars();
+        }
     }
 
     @Override
     protected void onDestroy() {
         if (warningTimer != null) warningTimer.cancel();
-        if (imageTimer != null) imageTimer.cancel();
         stopCountdownMusic();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (screenReceiverRegistered) {
+            try { unregisterReceiver(screenOffReceiver); } catch (IllegalArgumentException ignored) {}
+            screenReceiverRegistered = false;
+        }
         super.onDestroy();
     }
 }
